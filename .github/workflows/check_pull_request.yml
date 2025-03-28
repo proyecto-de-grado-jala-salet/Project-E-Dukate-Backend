@@ -1,0 +1,29 @@
+name: Check Pull Request 🔄
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code 📦
+        uses: actions/checkout@v3
+
+      - name: Validate PR rules ✅
+        run: |
+          BASE_BRANCH=${{ github.base_ref }}
+          HEAD_BRANCH=${{ github.head_ref }}
+
+          if [[ "$BASE_BRANCH" == "main" && ! "$HEAD_BRANCH" =~ ^(release/.*|hotfix/.*)$ ]]; then
+            echo "Error: Only 'release/*' or 'hotfix/*' branches can be merged into 'main'. ❌"
+            exit 1
+          elif [[ "$BASE_BRANCH" == "develop" && ! "$HEAD_BRANCH" =~ ^(feature/.*|task/.*|release/.*|hotfix/.*)$ ]]; then
+            echo "Error: Only 'feature/*', 'task/*', 'release/*', or 'hotfix/*' branches can be merged into 'develop'. ❌"
+            exit 1
+          else
+            echo "PR from '$HEAD_BRANCH' to '$BASE_BRANCH' is valid. ✅"
+          fi

@@ -1,0 +1,36 @@
+name: Check Commit Messages ✅
+
+on:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  validate-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code 📦
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages ✍️
+        run: |
+          COMMITS=$(git log HEAD^..HEAD --pretty=format:"%s")
+          VALID_TYPES="^(build|ci|docs|feat|fix|refactor|style|test|chore):"
+          for COMMIT in "$COMMITS"; do
+            if [[ ! "$COMMIT" =~ $VALID_TYPES ]]; then
+              echo "Error: Commit message '$COMMIT' does not start with a valid type (build, ci, docs, feat, fix, refactor, style, test, chore). ❌"
+              exit 1
+            fi
+            STATEMENTS=$(echo "$COMMIT" | cut -d':' -f2- | tr -d ' ')
+            if [[ -z "$STATEMENTS" ]]; then
+              echo "Error: Commit message '$COMMIT' has no statements after the colon. ❌"
+              exit 1
+            fi
+            if [[ "$STATEMENTS" =~ ^[^a-z] || "$STATEMENTS" =~ [A-Z] ]]; then
+              echo "Error: Statements in '$COMMIT' must start with a lowercase verb. ❌"
+              exit 1
+            fi
+            echo "Commit message '$COMMIT' is valid. ✅"
+          done
