@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - develop
 
 jobs:
   validate-push:
@@ -16,7 +15,7 @@ jobs:
       - name: Check if push is from PR 🔍
         run: |
           if [[ "${{ github.event_name }}" == "push" && "${{ github.actor }}" != "github-actions[bot]" ]]; then
-            echo "Error: Direct pushes to 'main' or 'develop' are not allowed. Use a pull request. ❌"
+            echo "Error: Direct pushes to '${{ github.ref_name }}' are not allowed. Use a pull request. ❌"
             exit 1
           else
             echo "Push to '${{ github.ref_name }}' is valid. ✅"
