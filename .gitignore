@@ -1,0 +1,91 @@
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rch/
+[Bb]in/
+[Oo]bj/
+out/
+
+# Visual Studio files
+*.csproj.user
+*.suo
+*.cache
+*.docstates
+*.sln.docstates
+*.user
+*.userosscache
+.sln.suo
+.sln.vssscc
+.sln.vsmdi
+*.ncb
+*.aps
+*.bak
+*.log
+*.tlog
+*.pdb
+*.idb
+*.ilk
+*.exp
+*.lib
+*.sbr
+*.obj
+*.pch
+*.res
+*.manifest
+*.xml
+*.vsp
+*.vspscc
+*.vssscc
+*.vstemplate
+
+# NuGet Packages
+*.nupkg
+packages/
+*/packages/
+!**/packages/build/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Rider (JetBrains)
+.idea/
+*.iml
+
+# Test results
+[Tt]est[Rr]esult*/
+*.trx
+
+# Dependency directories
+node_modules/
+bower_components/
+
+# Logs
+*.log
+logs/
+.log.
+
+# Miscellaneous
+Thumbs.db
+*.DS_Store
+*.swp
+*~
+*.tmp
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.nuget.props
+*.nuget.targets
+
+# Docker
+Dockerfile.user
+*.dockerignore
+
+# Environment files
+.env
+appsettings.*.json
+appsettings.json
