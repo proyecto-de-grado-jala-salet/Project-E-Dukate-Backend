@@ -22,8 +22,7 @@ public class SpecialistService : GenericService<Specialist>
         var validationResult = _validator.Validate(dto);
         if (!validationResult.IsValid)
         {
-            var errorMessage = validationResult.Errors.First().ErrorMessage;
-            throw new ValidationException(errorMessage);
+            throw new ValidationException(validationResult.Errors);
         }
 
         var specialist = new Specialist
@@ -53,8 +52,7 @@ public class SpecialistService : GenericService<Specialist>
         var validationResult = _validator.Validate(dto);
         if (!validationResult.IsValid)
         {
-            var errorMessage = validationResult.Errors.First().ErrorMessage;
-            throw new ValidationException(errorMessage);
+            throw new ValidationException(validationResult.Errors);
         }
 
         var existing = _repository.GetById(id);

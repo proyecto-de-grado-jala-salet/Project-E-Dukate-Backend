@@ -22,8 +22,7 @@ public class AdministratorService : GenericService<Administrator>
         var validationResult = _validator.Validate(dto);
         if (!validationResult.IsValid)
         {
-            var errorMessage = validationResult.Errors.First().ErrorMessage;
-            throw new ValidationException(errorMessage); // Solo el mensaje
+            throw new ValidationException(validationResult.Errors);
         }
         var administrator = new Administrator
         {
@@ -50,8 +49,7 @@ public class AdministratorService : GenericService<Administrator>
         var validationResult = _validator.Validate(dto);
         if (!validationResult.IsValid)
         {
-            var errorMessage = validationResult.Errors.First().ErrorMessage;
-            throw new ValidationException(errorMessage); // Solo el mensaje
+            throw new ValidationException(validationResult.Errors);
         }
 
         // Verificar si el administrador existe
