@@ -3,6 +3,7 @@ using E_Dukate.Application.Services;
 using E_Dukate.Application.DTOs; // Agregado para PatientDto
 using E_Dukate.Domain.Entities;
 using FluentValidation;
+using System.Linq;
 
 namespace E_Dukate.Presentation.Controllers;
 
@@ -23,11 +24,11 @@ public class PatientsController : ControllerBase
         try
         {
         _service.Register(dto);
-        return CreatedAtAction(nameof(GetById), new { id = Guid.NewGuid() }, dto); // Usamos Guid.NewGuid() como placeholder
+        return CreatedAtAction(nameof(GetById), new { id = Guid.NewGuid() }, dto);
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = ex.Message }); // Respuesta personalizada
+            return BadRequest(new { Errors = ex.Errors.ToList().Select(ex => ex.ErrorMessage) });
         }
     }
 
@@ -41,7 +42,7 @@ public class PatientsController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { Errors = ex.Errors.ToList().Select(ex => ex.ErrorMessage) });
         }
         catch (Exception ex) when (ex.Message == "Patient not found.")
         {
