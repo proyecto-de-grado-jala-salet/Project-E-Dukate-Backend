@@ -18,6 +18,18 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Agregar CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        //policy.AllowAnyOrigin() // Permite cualquier origen (ajústalo según tus necesidades)
+        policy.WithOrigins("http://localhost:3000")
+              .AllowAnyMethod() // Permite cualquier método (GET, POST, etc.)
+              .AllowAnyHeader(); // Permite cualquier cabecera
+    });
+});
+
 // Database configuration
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -41,6 +53,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseCors("AllowAll");
 
 app.UseAuthorization();
 app.MapControllers();
