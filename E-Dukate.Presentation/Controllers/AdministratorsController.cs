@@ -23,22 +23,13 @@ public class AdministratorsController : ControllerBase
         try
         {
             _service.Register(dto);
-            return CreatedAtAction(nameof(GetById), new { id = Guid.NewGuid() }, dto); // Ajusta para devolver el ID real
+            return CreatedAtAction(nameof(GetById), new { id = Guid.NewGuid() }, dto);
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = ex.Message }); // Respuesta personalizada
+            return BadRequest(new { Errors = ex.Errors.ToList().Select(ex => ex.ErrorMessage) });
         }
     }
-
-    // [HttpPut("{id}")]
-    // public IActionResult Update(Guid id, [FromBody] Administrator updated)
-    // {
-    //     var existing = _service.FindById(id);
-    //     if (existing == null) return NotFound();
-    //     _service.Update(updated); // El servicio maneja el Id
-    //     return NoContent();
-    // }
 
     [HttpPut("{id}")]
     public IActionResult Update(Guid id, [FromBody] AdministratorDto dto)
@@ -50,7 +41,7 @@ public class AdministratorsController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { Errors = ex.Errors.ToList().Select(ex => ex.ErrorMessage) });
         }
         catch (Exception ex) when (ex.Message == "Administrator not found.")
         {

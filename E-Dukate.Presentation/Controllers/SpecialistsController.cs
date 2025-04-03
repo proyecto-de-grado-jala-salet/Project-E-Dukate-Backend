@@ -27,7 +27,7 @@ public class SpecialistsController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { Errors = ex.Errors.ToList().Select(ex => ex.ErrorMessage) });
         }
     }
 
@@ -41,7 +41,7 @@ public class SpecialistsController : ControllerBase
         }
         catch (ValidationException ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { Errors = ex.Errors.ToList().Select(ex => ex.ErrorMessage) });
         }
         catch (Exception ex) when (ex.Message == "Specialist not found.")
         {
