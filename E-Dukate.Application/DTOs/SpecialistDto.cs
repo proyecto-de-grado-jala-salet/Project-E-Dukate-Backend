@@ -10,7 +10,7 @@ public class SpecialistDto
     public string? PhoneNumber { get; set; }
     public required int Age { get; set; }
     public required string Gender { get; set; }
-    public required DateTime DateOfBirth { get; set; }
+    public required DateOnly DateOfBirth { get; set; }
     public required string Address { get; set; }
     public required string Email { get; set; }
     public required string Password { get; set; }
