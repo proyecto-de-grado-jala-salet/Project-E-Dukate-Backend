@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using E_Dukate.Domain.Entities;
+using E_Dukate.Domain.Entities.Users;
+using E_Dukate.Domain.Entities.Specialties;
 
 namespace E_Dukate.Infrastructure.Data;
 

@@ -6,5 +6,5 @@ public interface IGenericRepository<T> where T : Primitives.Entity
     void Update(T entity);
     void Delete(Guid id);
     T? GetById(Guid id);
-    IQueryable<T> GetAll(); // Cambiado de IEnumerable<T> a IQueryable<T>
+    IQueryable<T> GetAll();
 }

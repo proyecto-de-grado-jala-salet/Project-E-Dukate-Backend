@@ -1,4 +1,4 @@
-namespace E_Dukate.Domain.Entities;
+namespace E_Dukate.Domain.Entities.Users;
 
 public abstract class User : Primitives.Entity
 {
