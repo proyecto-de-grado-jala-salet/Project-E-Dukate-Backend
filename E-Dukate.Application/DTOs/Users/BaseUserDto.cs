@@ -1,6 +1,6 @@
-namespace E_Dukate.Application.DTOs;
+namespace E_Dukate.Application.DTOs.Users;
 
-public class AdministratorDto
+public abstract class BaseUserDto
 {
     public required string Names { get; set; }
     public required string LastNamePaternal { get; set; }
@@ -12,6 +12,4 @@ public class AdministratorDto
     public required string Gender { get; set; }
     public required DateOnly DateOfBirth { get; set; }
     public required string Address { get; set; }
-    public required string Email { get; set; }
-    public required string Password { get; set; }
 }

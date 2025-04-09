@@ -1,4 +1,4 @@
-namespace E_Dukate.Application.DTOs;
+namespace E_Dukate.Application.DTOs.Specialties;
 
 public class SpecialtyDto
 {

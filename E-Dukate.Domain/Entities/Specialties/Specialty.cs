@@ -1,4 +1,4 @@
-namespace E_Dukate.Domain.Entities;
+namespace E_Dukate.Domain.Entities.Specialties;
 
 public class Specialty : Primitives.Entity
 {

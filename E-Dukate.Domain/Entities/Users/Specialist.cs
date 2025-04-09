@@ -1,4 +1,6 @@
-namespace E_Dukate.Domain.Entities;
+using E_Dukate.Domain.Entities.Specialties;
+
+namespace E_Dukate.Domain.Entities.Users;
 
 public class Specialist : User
 {

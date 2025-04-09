@@ -1,11 +1,11 @@
 using FluentValidation;
-using E_Dukate.Application.DTOs;
+using E_Dukate.Application.DTOs.Users;
 
-namespace E_Dukate.Application.Validators;
+namespace E_Dukate.Application.Validators.Users;
 
-public class SpecialistValidator : AbstractValidator<SpecialistDto>
+public abstract class BaseUserValidator<T> : AbstractValidator<T> where T : BaseUserDto
 {
-    public SpecialistValidator()
+    protected BaseUserValidator()
     {
         RuleFor(x => x.Names)
             .NotEmpty().WithMessage("Names are required.")
@@ -21,7 +21,7 @@ public class SpecialistValidator : AbstractValidator<SpecialistDto>
 
         RuleFor(x => x.MobileNumber)
             .NotEmpty().WithMessage("Cell Phone Number is required.")
-            .Matches("^[67][0-9]{7}$").WithMessage("Cell Phone Number must begin with the number '6' or '7' and must be 8 digits.");
+            .Matches("^[67][0-9]{7}$").WithMessage("Cell Phone Number must begin with '6' or '7' and be 8 digits.");
 
         RuleFor(x => x.IdentityCard)
             .GreaterThan(0).WithMessage("The National Identity Card must be a positive number.")
@@ -43,30 +43,10 @@ public class SpecialistValidator : AbstractValidator<SpecialistDto>
             .Must(date => date <= DateOnly.FromDateTime(DateTime.UtcNow))
             .WithMessage("The Date of Birth must not exceed the current date.")
             .Must(date => date >= DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-100)))
-            .WithMessage("The date of birth entered must not be older than 100 years from the current date.");
-
+            .WithMessage("The date of birth must not be older than 100 years.");
+            
         RuleFor(x => x.Address)
             .NotEmpty().WithMessage("Address is required.")
             .MaximumLength(200).WithMessage("The address must not exceed 200 characters.");
-
-        RuleFor(x => x.Email)
-            .NotEmpty().WithMessage("Email is required.")
-            .EmailAddress().WithMessage("Invalid email format.");
-
-        RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("Password is required.")
-            .MinimumLength(8).WithMessage("Password must be at least 8 characters.")
-            .Matches("[A-Za-z]").WithMessage("Password must contain at least one letter.")
-            .Matches("[0-9]").WithMessage("Password must contain at least one number.");
-
-        RuleFor(x => x.TypeOfSpecialty)
-            .NotEmpty().WithMessage("Specialty is required.")
-            .Length(2, 100).WithMessage("Specialty must be between 2 and 100 characters.");
-
-        RuleFor(x => x.YearsOfExperience)
-            .GreaterThanOrEqualTo(0).WithMessage("Years of experience must be a positive number.");
-
-        RuleFor(x => x.SpecialistCode)
-            .NotEmpty().WithMessage("Specialist code is required.");
     }
 }

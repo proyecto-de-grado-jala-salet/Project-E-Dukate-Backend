@@ -1,7 +1,7 @@
+using E_Dukate.Application.DTOs.Specialties;
 using FluentValidation;
-using E_Dukate.Application.DTOs;
 
-namespace E_Dukate.Application.Validators;
+namespace E_Dukate.Application.Validators.Specialties;
 
 public class SpecialtyValidator : AbstractValidator<SpecialtyDto>
 {
