@@ -37,29 +37,25 @@ public class AdministratorService : GenericService<Administrator>
             DateOfBirth = dto.DateOfBirth,
             Address = dto.Address,
             Email = dto.Email,
-            Password = dto.Password,
-            AccessCode = dto.AccessCode
+            Password = dto.Password
         };
         _repository.Add(administrator);
     }
 
     public void Update(Guid id, AdministratorDto dto)
     {
-        // Validar el DTO
         var validationResult = _validator.Validate(dto);
         if (!validationResult.IsValid)
         {
             throw new ValidationException(validationResult.Errors);
         }
-
-        // Verificar si el administrador existe
+        
         var existing = _repository.GetById(id);
         if (existing == null)
         {
             throw new Exception("Administrator not found.");
         }
 
-        // Actualizar los campos del administrador existente
         existing.Names = dto.Names;
         existing.LastNamePaternal = dto.LastNamePaternal;
         existing.LastNameMaternal = dto.LastNameMaternal;
@@ -71,8 +67,7 @@ public class AdministratorService : GenericService<Administrator>
         existing.DateOfBirth = dto.DateOfBirth;
         existing.Address = dto.Address;
         existing.Email = dto.Email;
-        existing.Password = dto.Password; // Considera hashear si cambias la contraseña
-        existing.AccessCode = dto.AccessCode;
+        existing.Password = dto.Password;
 
         _repository.Update(existing);
     }

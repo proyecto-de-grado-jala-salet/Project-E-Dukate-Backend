@@ -16,7 +16,6 @@ public class AdministratorValidator : AbstractValidator<AdministratorDto>
             .Length(2, 50).WithMessage("Paternal Last Name must be between 2 and 50 characters.");
 
         RuleFor(x => x.LastNameMaternal)
-            .NotEmpty().WithMessage("Mother's last name is mandatory.")
             .Length(2, 50).WithMessage("Maternal Last Name must be between 2 and 50 characters.");
 
         RuleFor(x => x.MobileNumber)
@@ -58,8 +57,5 @@ public class AdministratorValidator : AbstractValidator<AdministratorDto>
             .MinimumLength(8).WithMessage("Password must be at least 8 characters.")
             .Matches("[A-Za-z]").WithMessage("Password must contain at least one letter.")
             .Matches("[0-9]").WithMessage("Password must contain at least one number.");
-
-        RuleFor(x => x.AccessCode)
-            .Equal("123").WithMessage("Invalid access code for Administrator.");
     }
 }

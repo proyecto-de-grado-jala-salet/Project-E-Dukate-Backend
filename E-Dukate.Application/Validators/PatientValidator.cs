@@ -16,7 +16,6 @@ public class PatientValidator : AbstractValidator<PatientDto>
             .Length(2, 50).WithMessage("Paternal Last Name must be between 2 and 50 characters.");
 
         RuleFor(x => x.LastNameMaternal)
-            .NotEmpty().WithMessage("Mother's last name is mandatory.")
             .Length(2, 50).WithMessage("Maternal Last Name must be between 2 and 50 characters.");
 
         RuleFor(x => x.MobileNumber)

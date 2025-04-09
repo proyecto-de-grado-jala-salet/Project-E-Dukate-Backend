@@ -1,11 +1,11 @@
-using E_Dukate.Domain.Interfaces;
-using E_Dukate.Domain.Entities;
-using E_Dukate.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using E_Dukate.Domain.Interfaces;
+using E_Dukate.Domain.Primitives;
+using E_Dukate.Infrastructure.Data;
 
 namespace E_Dukate.Infrastructure.Repositories;
 
-public class GenericRepository<T> : IGenericRepository<T> where T : User
+public class GenericRepository<T> : IGenericRepository<T> where T : Entity
 {
     private readonly AppDbContext _context;
     private readonly DbSet<T> _entities;
@@ -39,5 +39,6 @@ public class GenericRepository<T> : IGenericRepository<T> where T : User
     }
 
     public T? GetById(Guid id) => _entities.Find(id);
-    public IEnumerable<T> GetAll() => _entities.ToList();
+
+    public IQueryable<T> GetAll() => _entities.AsQueryable(); // Cambiado a IQueryable
 }

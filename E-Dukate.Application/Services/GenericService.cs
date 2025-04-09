@@ -1,9 +1,9 @@
 using E_Dukate.Domain.Interfaces;
-using E_Dukate.Domain.Entities;
+using E_Dukate.Domain.Primitives;
 
 namespace E_Dukate.Application.Services;
 
-public class GenericService<T> where T : User
+public class GenericService<T> where T : Entity
 {
     private readonly IGenericRepository<T> _repository;
 
