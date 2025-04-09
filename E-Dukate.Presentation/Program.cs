@@ -9,7 +9,7 @@ using E_Dukate.Application.DTOs;
 using FluentValidation;
 using DotNetEnv;
 
-Env.Load(); // Cargar variables de entorno desde .env
+Env.Load("../.env"); // Cargar .env desde la raíz de la solución
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,10 +23,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        //policy.AllowAnyOrigin() // Permite cualquier origen (ajústalo según tus necesidades)
         policy.WithOrigins("http://localhost:3000")
-              .AllowAnyMethod() // Permite cualquier método (GET, POST, etc.)
-              .AllowAnyHeader(); // Permite cualquier cabecera
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
@@ -38,12 +37,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IGenericRepository<Administrator>, GenericRepository<Administrator>>();
 builder.Services.AddScoped<IGenericRepository<Specialist>, GenericRepository<Specialist>>();
 builder.Services.AddScoped<IGenericRepository<Patient>, GenericRepository<Patient>>();
+builder.Services.AddScoped<IGenericRepository<Specialty>, GenericRepository<Specialty>>();
 builder.Services.AddScoped<AdministratorService>();
 builder.Services.AddScoped<SpecialistService>();
 builder.Services.AddScoped<PatientService>();
+builder.Services.AddScoped<SpecialtyService>();
 builder.Services.AddScoped<IValidator<AdministratorDto>, AdministratorValidator>();
 builder.Services.AddScoped<IValidator<SpecialistDto>, SpecialistValidator>();
 builder.Services.AddScoped<IValidator<PatientDto>, PatientValidator>();
+builder.Services.AddScoped<IValidator<SpecialtyDto>, SpecialtyValidator>();
 
 var app = builder.Build();
 

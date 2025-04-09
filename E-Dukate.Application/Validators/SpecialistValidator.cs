@@ -16,8 +16,8 @@ public class SpecialistValidator : AbstractValidator<SpecialistDto>
             .Length(2, 50).WithMessage("Paternal Last Name must be between 2 and 50 characters.");
 
         RuleFor(x => x.LastNameMaternal)
-            .NotEmpty().WithMessage("Mother's last name is mandatory.")
-            .Length(2, 50).WithMessage("Maternal Last Name must be between 2 and 50 characters.");
+            .Length(2, 50).WithMessage("Maternal Last Name must be between 2 and 50 characters.")
+            .When(x => !string.IsNullOrWhiteSpace(x.LastNameMaternal));
 
         RuleFor(x => x.MobileNumber)
             .NotEmpty().WithMessage("Cell Phone Number is required.")
@@ -59,7 +59,14 @@ public class SpecialistValidator : AbstractValidator<SpecialistDto>
             .Matches("[A-Za-z]").WithMessage("Password must contain at least one letter.")
             .Matches("[0-9]").WithMessage("Password must contain at least one number.");
 
-        RuleFor(x => x.AccessCode)
-            .Equal("456").WithMessage("Invalid access code for Specialist.");
+        RuleFor(x => x.TypeOfSpecialty)
+            .NotEmpty().WithMessage("Specialty is required.")
+            .Length(2, 100).WithMessage("Specialty must be between 2 and 100 characters.");
+
+        RuleFor(x => x.YearsOfExperience)
+            .GreaterThanOrEqualTo(0).WithMessage("Years of experience must be a positive number.");
+
+        RuleFor(x => x.SpecialistCode)
+            .NotEmpty().WithMessage("Specialist code is required.");
     }
 }

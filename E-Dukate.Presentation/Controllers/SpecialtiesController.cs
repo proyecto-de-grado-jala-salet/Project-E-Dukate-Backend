@@ -7,17 +7,17 @@ namespace E_Dukate.Presentation.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AdministratorsController : ControllerBase
+public class SpecialtiesController : ControllerBase
 {
-    private readonly AdministratorService _service;
+    private readonly SpecialtyService _service;
 
-    public AdministratorsController(AdministratorService service)
+    public SpecialtiesController(SpecialtyService service)
     {
         _service = service;
     }
 
     [HttpPost]
-    public IActionResult Add([FromBody] AdministratorDto dto)
+    public IActionResult Add([FromBody] SpecialtyDto dto)
     {
         try
         {
@@ -31,7 +31,7 @@ public class AdministratorsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public IActionResult Update(Guid id, [FromBody] AdministratorDto dto)
+    public IActionResult Update(Guid id, [FromBody] SpecialtyDto dto)
     {
         try
         {
@@ -42,7 +42,7 @@ public class AdministratorsController : ControllerBase
         {
             return BadRequest(new { Errors = ex.Errors.ToList().Select(ex => ex.ErrorMessage) });
         }
-        catch (Exception ex) when (ex.Message == "Administrator not found.")
+        catch (Exception ex) when (ex.Message == "Specialty not found.")
         {
             return NotFound();
         }
@@ -58,15 +58,15 @@ public class AdministratorsController : ControllerBase
     [HttpGet("{id}")]
     public IActionResult GetById(Guid id)
     {
-        var administrator = _service.FindById(id);
-        if (administrator == null) return NotFound();
-        return Ok(administrator);
+        var specialty = _service.FindById(id);
+        if (specialty == null) return NotFound();
+        return Ok(specialty);
     }
 
     [HttpGet]
     public IActionResult GetAll()
     {
-        var administrators = _service.ListAll();
-        return Ok(administrators);
+        var specialties = _service.ListAll();
+        return Ok(specialties);
     }
 }

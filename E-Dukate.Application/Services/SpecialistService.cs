@@ -2,19 +2,37 @@ using E_Dukate.Domain.Entities;
 using E_Dukate.Domain.Interfaces;
 using E_Dukate.Application.DTOs;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 
 namespace E_Dukate.Application.Services;
 
 public class SpecialistService : GenericService<Specialist>
 {
     private readonly IGenericRepository<Specialist> _repository;
+    private readonly IGenericRepository<Specialty> _specialtyRepository;
     private readonly IValidator<SpecialistDto> _validator;
 
-    public SpecialistService(IGenericRepository<Specialist> repository, IValidator<SpecialistDto> validator)
+    public SpecialistService(
+        IGenericRepository<Specialist> repository,
+        IGenericRepository<Specialty> specialtyRepository,
+        IValidator<SpecialistDto> validator)
         : base(repository)
     {
         _repository = repository;
+        _specialtyRepository = specialtyRepository;
         _validator = validator;
+    }
+
+    // Nuevo método específico para obtener un Specialist con su Specialty
+    public Specialist? GetSpecialistById(Guid id)
+    {
+        return _repository.GetAll().Include(s => s.Specialty).FirstOrDefault(s => s.Id == id);
+    }
+
+    // Nuevo método específico para listar Specialists con su Specialty
+    public IEnumerable<Specialist> GetAllSpecialists()
+    {
+        return _repository.GetAll().Include(s => s.Specialty).ToList();
     }
 
     public void Register(SpecialistDto dto)
@@ -23,6 +41,14 @@ public class SpecialistService : GenericService<Specialist>
         if (!validationResult.IsValid)
         {
             throw new ValidationException(validationResult.Errors);
+        }
+
+        var specialty = _specialtyRepository.GetAll()
+            .FirstOrDefault(s => s.TypeOfSpecialty == dto.TypeOfSpecialty);
+        
+        if (specialty == null)
+        {
+            throw new Exception("The chosen specialty does not exist");
         }
 
         var specialist = new Specialist
@@ -39,10 +65,9 @@ public class SpecialistService : GenericService<Specialist>
             Address = dto.Address,
             Email = dto.Email,
             Password = dto.Password,
-            Specialty = dto.Specialty,
+            Specialty = specialty,
             YearsOfExperience = dto.YearsOfExperience,
-            SpecialistCode = dto.SpecialistCode,
-            AccessCode = dto.AccessCode
+            SpecialistCode = dto.SpecialistCode
         };
         _repository.Add(specialist);
     }
@@ -53,6 +78,14 @@ public class SpecialistService : GenericService<Specialist>
         if (!validationResult.IsValid)
         {
             throw new ValidationException(validationResult.Errors);
+        }
+
+        var specialty = _specialtyRepository.GetAll()
+            .FirstOrDefault(s => s.TypeOfSpecialty == dto.TypeOfSpecialty);
+        
+        if (specialty == null)
+        {
+            throw new Exception("The chosen specialty does not exist");
         }
 
         var existing = _repository.GetById(id);
@@ -73,10 +106,9 @@ public class SpecialistService : GenericService<Specialist>
         existing.Address = dto.Address;
         existing.Email = dto.Email;
         existing.Password = dto.Password;
-        existing.Specialty = dto.Specialty;
+        existing.Specialty = specialty;
         existing.YearsOfExperience = dto.YearsOfExperience;
         existing.SpecialistCode = dto.SpecialistCode;
-        existing.AccessCode = dto.AccessCode;
 
         _repository.Update(existing);
     }

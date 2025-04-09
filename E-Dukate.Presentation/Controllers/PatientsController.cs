@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using E_Dukate.Application.Services;
-using E_Dukate.Application.DTOs; // Agregado para PatientDto
-using E_Dukate.Domain.Entities;
+using E_Dukate.Application.DTOs;
 using FluentValidation;
 using System.Linq;
 
@@ -23,8 +22,8 @@ public class PatientsController : ControllerBase
     {
         try
         {
-        _service.Register(dto);
-        return CreatedAtAction(nameof(GetById), new { id = Guid.NewGuid() }, dto);
+            _service.Register(dto);
+            return CreatedAtAction(nameof(GetById), new { id = Guid.NewGuid() }, dto);
         }
         catch (ValidationException ex)
         {
