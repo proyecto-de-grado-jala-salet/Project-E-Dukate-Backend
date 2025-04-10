@@ -1,7 +1,9 @@
+// E-Dukate.Presentation/Controllers/BaseController.cs
 using Microsoft.AspNetCore.Mvc;
 using E_Dukate.Application.Services;
 using E_Dukate.Domain.Primitives;
 using FluentValidation;
+using E_Dukate.Application.DTOs.Common; // Actualizado
 
 namespace E_Dukate.Presentation.Controllers;
 
@@ -44,6 +46,10 @@ public abstract class BaseController<T, TDto> : ControllerBase
         {
             return BadRequest(new { Errors = ex.Errors.Select(e => e.ErrorMessage) });
         }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
         catch (Exception ex) when (ex.Message.Contains("not found"))
         {
             return NotFound();
@@ -66,9 +72,16 @@ public abstract class BaseController<T, TDto> : ControllerBase
     }
 
     [HttpGet]
-    public virtual IActionResult GetAll()
+    public virtual async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
     {
-        var entities = Service.ListAll();
-        return Ok(entities);
+        var (items, totalCount) = await Service.GetPagedAsync(pagination);
+        return Ok(new
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize)
+        });
     }
 }
