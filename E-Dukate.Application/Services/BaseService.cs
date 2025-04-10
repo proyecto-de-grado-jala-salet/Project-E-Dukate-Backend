@@ -1,9 +1,8 @@
-// E-Dukate.Application/Services/BaseService.cs
 using E_Dukate.Domain.Interfaces;
 using E_Dukate.Domain.Primitives;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using E_Dukate.Application.DTOs.Common; // Actualizado
+using E_Dukate.Application.DTOs.Common;
 
 namespace E_Dukate.Application.Services;
 
@@ -18,28 +17,30 @@ public abstract class BaseService<T, TDto> where T : Entity where TDto : class
         Validator = validator;
     }
 
-    public virtual void Register(TDto dto)
+    public virtual Result Register(TDto dto)
     {
         var validationResult = Validator.Validate(dto);
         if (!validationResult.IsValid)
-            throw new ValidationException(validationResult.Errors);
+            return Result.Failure(string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
 
         var entity = MapToEntity(dto);
         Repository.Add(entity);
+        return Result.Success();
     }
 
-    public virtual void Update(Guid id, TDto dto)
+    public virtual Result Update(Guid id, TDto dto)
     {
         var validationResult = Validator.Validate(dto);
         if (!validationResult.IsValid)
-            throw new ValidationException(validationResult.Errors);
+            return Result.Failure(string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
 
         var existing = Repository.GetById(id);
         if (existing == null)
-            throw new Exception($"{typeof(T).Name} not found.");
+            return Result.Failure($"{typeof(T).Name} not found.");
 
         UpdateEntity(existing, dto);
         Repository.Update(existing);
+        return Result.Success();
     }
 
     public void Delete(Guid id)

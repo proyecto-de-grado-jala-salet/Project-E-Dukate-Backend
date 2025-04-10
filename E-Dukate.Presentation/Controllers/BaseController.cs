@@ -1,9 +1,8 @@
-// E-Dukate.Presentation/Controllers/BaseController.cs
 using Microsoft.AspNetCore.Mvc;
 using E_Dukate.Application.Services;
 using E_Dukate.Domain.Primitives;
 using FluentValidation;
-using E_Dukate.Application.DTOs.Common; // Actualizado
+using E_Dukate.Application.DTOs.Common;
 
 namespace E_Dukate.Presentation.Controllers;
 
