@@ -3,6 +3,7 @@ using E_Dukate.Application.DTOs.Specialties;
 using FluentValidation;
 using E_Dukate.Application.Utilities;
 using E_Dukate.Domain.Entities.Specialties;
+using E_Dukate.Domain.Primitives;
 
 namespace E_Dukate.Application.Services.Specialties;
 
@@ -16,11 +17,11 @@ public class SpecialtyService : BaseService<Specialty, SpecialtyDto>
         _repository = repository;
     }
 
-    public override void Register(SpecialtyDto dto)
+    public Result Register(SpecialtyDto dto)
     {
         var validationResult = Validator.Validate(dto);
         if (!validationResult.IsValid)
-            throw new ValidationException(validationResult.Errors);
+            return Result.Failure(string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
 
         var normalizedSpecialty = TextNormalizer.Normalize(dto.TypeOfSpecialty);
         var specialties = _repository.GetAll().ToList();
@@ -28,24 +29,25 @@ public class SpecialtyService : BaseService<Specialty, SpecialtyDto>
             .FirstOrDefault(s => TextNormalizer.Normalize(s.TypeOfSpecialty) == normalizedSpecialty);
 
         if (existingSpecialty != null)
-            throw new InvalidOperationException($"The specialty '{dto.TypeOfSpecialty}' already exists.");
+            return Result.Failure($"La especialidad '{dto.TypeOfSpecialty}' ya existe.");
 
         var specialty = new Specialty
         {
             TypeOfSpecialty = dto.TypeOfSpecialty
         };
         _repository.Add(specialty);
+        return Result.Success();
     }
 
-    public override void Update(Guid id, SpecialtyDto dto)
+    public Result Update(Guid id, SpecialtyDto dto)
     {
         var validationResult = Validator.Validate(dto);
         if (!validationResult.IsValid)
-            throw new ValidationException(validationResult.Errors);
+            return Result.Failure(string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
 
         var existing = _repository.GetById(id);
         if (existing == null)
-            throw new Exception($"{typeof(Specialty).Name} not found.");
+            return Result.Failure($"{typeof(Specialty).Name} not found.");
 
         var normalizedSpecialty = TextNormalizer.Normalize(dto.TypeOfSpecialty);
         var specialties = _repository.GetAll().ToList();
@@ -53,10 +55,11 @@ public class SpecialtyService : BaseService<Specialty, SpecialtyDto>
             .FirstOrDefault(s => TextNormalizer.Normalize(s.TypeOfSpecialty) == normalizedSpecialty && s.Id != id);
 
         if (duplicateSpecialty != null)
-            throw new InvalidOperationException($"The specialty '{dto.TypeOfSpecialty}' already exists.");
+            return Result.Failure($"La especialidad '{dto.TypeOfSpecialty}' ya existe.");
 
         UpdateEntity(existing, dto);
         _repository.Update(existing);
+        return Result.Success();
     }
 
     protected override Specialty MapToEntity(SpecialtyDto dto)

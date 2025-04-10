@@ -1,10 +1,9 @@
-// E-Dukate.Presentation/Controllers/Users/SpecialistsController.cs
 using Microsoft.AspNetCore.Mvc;
 using E_Dukate.Application.Services.Users;
 using E_Dukate.Application.DTOs.Users;
 using E_Dukate.Application.DTOs.Common;
 using E_Dukate.Domain.Entities.Users;
-using FluentValidation; // Actualizado
+using FluentValidation;
 
 namespace E_Dukate.Presentation.Controllers.Users;
 
