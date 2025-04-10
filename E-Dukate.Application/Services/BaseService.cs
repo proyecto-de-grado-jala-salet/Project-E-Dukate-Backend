@@ -1,6 +1,9 @@
+// E-Dukate.Application/Services/BaseService.cs
 using E_Dukate.Domain.Interfaces;
 using E_Dukate.Domain.Primitives;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
+using E_Dukate.Application.DTOs.Common; // Actualizado
 
 namespace E_Dukate.Application.Services;
 
@@ -47,7 +50,19 @@ public abstract class BaseService<T, TDto> where T : Entity where TDto : class
     }
 
     public T? FindById(Guid id) => Repository.GetById(id);
+
     public IEnumerable<T> ListAll() => Repository.GetAll();
+
+    public async Task<(IEnumerable<T> Items, int TotalCount)> GetPagedAsync(PaginationParams pagination)
+    {
+        var query = Repository.GetAll();
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+        return (items, totalCount);
+    }
 
     protected abstract T MapToEntity(TDto dto);
     protected abstract void UpdateEntity(T entity, TDto dto);

@@ -1,8 +1,10 @@
+// E-Dukate.Presentation/Controllers/Users/SpecialistsController.cs
 using Microsoft.AspNetCore.Mvc;
 using E_Dukate.Application.Services.Users;
 using E_Dukate.Application.DTOs.Users;
+using E_Dukate.Application.DTOs.Common;
 using E_Dukate.Domain.Entities.Users;
-using FluentValidation;
+using FluentValidation; // Actualizado
 
 namespace E_Dukate.Presentation.Controllers.Users;
 
@@ -84,9 +86,14 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
     }
 
     [HttpGet]
-    public override IActionResult GetAll()
+    public override async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
     {
-        var specialists = _specialistService.GetAllSpecialists();
+        var specialists = _specialistService.GetAllSpecialists()
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToList();
+        var totalCount = _specialistService.GetAllSpecialists().Count();
+
         var response = specialists.Select(specialists => new
         {
             specialists.Id,
@@ -106,6 +113,14 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
             specialists.YearsOfExperience,
             specialists.SpecialistCode
         });
-        return Ok(response);
+
+        return Ok(new
+        {
+            Items = response,
+            TotalCount = totalCount,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize)
+        });
     }
 }
