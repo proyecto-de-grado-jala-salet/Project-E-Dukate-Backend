@@ -18,16 +18,15 @@ namespace E_Dukate.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Email = table.Column<string>(type: "text", nullable: false),
                     Password = table.Column<string>(type: "text", nullable: false),
-                    AccessCode = table.Column<string>(type: "text", nullable: false),
                     Names = table.Column<string>(type: "text", nullable: false),
                     LastNamePaternal = table.Column<string>(type: "text", nullable: false),
-                    LastNameMaternal = table.Column<string>(type: "text", nullable: false),
+                    LastNameMaternal = table.Column<string>(type: "text", nullable: true),
                     MobileNumber = table.Column<string>(type: "text", nullable: false),
                     IdentityCard = table.Column<int>(type: "integer", nullable: false),
                     PhoneNumber = table.Column<string>(type: "text", nullable: true),
                     Age = table.Column<int>(type: "integer", nullable: false),
                     Gender = table.Column<string>(type: "text", nullable: false),
-                    DateOfBirth = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DateOfBirth = table.Column<DateOnly>(type: "date", nullable: false),
                     Address = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
@@ -42,18 +41,30 @@ namespace E_Dukate.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Names = table.Column<string>(type: "text", nullable: false),
                     LastNamePaternal = table.Column<string>(type: "text", nullable: false),
-                    LastNameMaternal = table.Column<string>(type: "text", nullable: false),
+                    LastNameMaternal = table.Column<string>(type: "text", nullable: true),
                     MobileNumber = table.Column<string>(type: "text", nullable: false),
                     IdentityCard = table.Column<int>(type: "integer", nullable: false),
                     PhoneNumber = table.Column<string>(type: "text", nullable: true),
                     Age = table.Column<int>(type: "integer", nullable: false),
                     Gender = table.Column<string>(type: "text", nullable: false),
-                    DateOfBirth = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DateOfBirth = table.Column<DateOnly>(type: "date", nullable: false),
                     Address = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Patients", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Specialties",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    TypeOfSpecialty = table.Column<string>(type: "text", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Specialties", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -63,25 +74,61 @@ namespace E_Dukate.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Email = table.Column<string>(type: "text", nullable: false),
                     Password = table.Column<string>(type: "text", nullable: false),
-                    Specialty = table.Column<string>(type: "text", nullable: false),
+                    SpecialtyId = table.Column<Guid>(type: "uuid", nullable: false),
                     YearsOfExperience = table.Column<int>(type: "integer", nullable: false),
                     SpecialistCode = table.Column<string>(type: "text", nullable: false),
-                    AccessCode = table.Column<string>(type: "text", nullable: false),
                     Names = table.Column<string>(type: "text", nullable: false),
                     LastNamePaternal = table.Column<string>(type: "text", nullable: false),
-                    LastNameMaternal = table.Column<string>(type: "text", nullable: false),
+                    LastNameMaternal = table.Column<string>(type: "text", nullable: true),
                     MobileNumber = table.Column<string>(type: "text", nullable: false),
                     IdentityCard = table.Column<int>(type: "integer", nullable: false),
                     PhoneNumber = table.Column<string>(type: "text", nullable: true),
                     Age = table.Column<int>(type: "integer", nullable: false),
                     Gender = table.Column<string>(type: "text", nullable: false),
-                    DateOfBirth = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DateOfBirth = table.Column<DateOnly>(type: "date", nullable: false),
                     Address = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Specialists", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Specialists_Specialties_SpecialtyId",
+                        column: x => x.SpecialtyId,
+                        principalTable: "Specialties",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateTable(
+                name: "Schedules",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    SpecialistId = table.Column<Guid>(type: "uuid", nullable: false),
+                    DayOfWeek = table.Column<int>(type: "integer", nullable: false),
+                    TimeSlots = table.Column<string>(type: "text", nullable: false),
+                    Attends = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Schedules", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Schedules_Specialists_SpecialistId",
+                        column: x => x.SpecialistId,
+                        principalTable: "Specialists",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Schedules_SpecialistId",
+                table: "Schedules",
+                column: "SpecialistId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Specialists_SpecialtyId",
+                table: "Specialists",
+                column: "SpecialtyId");
         }
 
         /// <inheritdoc />
@@ -94,7 +141,13 @@ namespace E_Dukate.Infrastructure.Migrations
                 name: "Patients");
 
             migrationBuilder.DropTable(
+                name: "Schedules");
+
+            migrationBuilder.DropTable(
                 name: "Specialists");
+
+            migrationBuilder.DropTable(
+                name: "Specialties");
         }
     }
 }

@@ -22,37 +22,27 @@ public abstract class BaseController<T, TDto> : ControllerBase
     [HttpPost]
     public virtual IActionResult Add([FromBody] TDto dto)
     {
-        try
+        var result = Service.Register(dto);
+        if (!result.IsSuccess)
         {
-            Service.Register(dto);
-            return CreatedAtAction(nameof(GetById), new { id = Guid.NewGuid() }, dto);
+            return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { Errors = ex.Errors.Select(e => e.ErrorMessage) });
-        }
+
+        return CreatedAtAction(nameof(GetById), new { id = Guid.NewGuid() }, dto);
     }
 
     [HttpPut("{id}")]
     public virtual IActionResult Update(Guid id, [FromBody] TDto dto)
     {
-        try
+        var result = Service.Update(id, dto);
+        if (!result.IsSuccess)
         {
-            Service.Update(id, dto);
-            return NoContent();
+            if (result.ErrorMessage.Contains("not found"))
+                return NotFound(new { Error = result.ErrorMessage });
+            return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { Errors = ex.Errors.Select(e => e.ErrorMessage) });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { Error = ex.Message });
-        }
-        catch (Exception ex) when (ex.Message.Contains("not found"))
-        {
-            return NotFound();
-        }
+
+        return NoContent();
     }
 
     [HttpDelete("{id}")]
