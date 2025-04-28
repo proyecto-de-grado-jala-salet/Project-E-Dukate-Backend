@@ -22,7 +22,48 @@ namespace E_Dukate.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("E_Dukate.Domain.Entities.Administrator", b =>
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.Schedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Attends")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SpecialistId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TimeSlots")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpecialistId");
+
+                    b.ToTable("Schedules", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Specialties.Specialty", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TypeOfSpecialty")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Specialties", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Users.Administrator", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -76,7 +117,7 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.ToTable("Administrators", (string)null);
                 });
 
-            modelBuilder.Entity("E_Dukate.Domain.Entities.Patient", b =>
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Users.Patient", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -122,7 +163,7 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.ToTable("Patients", (string)null);
                 });
 
-            modelBuilder.Entity("E_Dukate.Domain.Entities.Specialist", b =>
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Users.Specialist", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -188,30 +229,31 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.ToTable("Specialists", (string)null);
                 });
 
-            modelBuilder.Entity("E_Dukate.Domain.Entities.Specialty", b =>
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.Schedule", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                    b.HasOne("E_Dukate.Domain.Entities.Users.Specialist", "Specialist")
+                        .WithMany("Schedules")
+                        .HasForeignKey("SpecialistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.Property<string>("TypeOfSpecialty")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Specialties", (string)null);
+                    b.Navigation("Specialist");
                 });
 
-            modelBuilder.Entity("E_Dukate.Domain.Entities.Specialist", b =>
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Users.Specialist", b =>
                 {
-                    b.HasOne("E_Dukate.Domain.Entities.Specialty", "Specialty")
+                    b.HasOne("E_Dukate.Domain.Entities.Specialties.Specialty", "Specialty")
                         .WithMany()
                         .HasForeignKey("SpecialtyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Specialty");
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Users.Specialist", b =>
+                {
+                    b.Navigation("Schedules");
                 });
 #pragma warning restore 612, 618
         }

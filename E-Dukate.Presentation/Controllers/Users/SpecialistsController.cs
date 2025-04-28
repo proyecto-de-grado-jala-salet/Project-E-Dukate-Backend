@@ -21,12 +21,13 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
     {
         try
         {
-            _specialistService.Register(dto);
+            var result = _specialistService.Register(dto);
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
+            }
+
             return CreatedAtAction(nameof(GetById), new { id = Guid.NewGuid() }, dto);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { Errors = ex.Errors.Select(e => e.ErrorMessage) });
         }
         catch (Exception ex) when (ex.Message == "The chosen specialty does not exist")
         {
@@ -37,23 +38,17 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
     [HttpPut("{id}")]
     public override IActionResult Update(Guid id, [FromBody] SpecialistDto dto)
     {
-        try
+        var result = _specialistService.Update(id, dto);
+        if (!result.IsSuccess)
         {
-            _specialistService.Update(id, dto);
-            return NoContent();
+            if (result.ErrorMessage == "The chosen specialty does not exist")
+                return BadRequest(new { Error = result.ErrorMessage });
+            if (result.ErrorMessage == "Specialist not found.")
+                return NotFound(new { Error = result.ErrorMessage });
+            return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { Errors = ex.Errors.Select(e => e.ErrorMessage) });
-        }
-        catch (Exception ex) when (ex.Message == "The chosen specialty does not exist")
-        {
-            return BadRequest(new { Error = ex.Message });
-        }
-        catch (Exception ex) when (ex.Message == "Specialist not found.")
-        {
-            return NotFound();
-        }
+
+        return NoContent();
     }
 
     [HttpGet("{id}")]
@@ -79,7 +74,17 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
             specialist.Password,
             specialty = specialist.Specialty?.TypeOfSpecialty,
             specialist.YearsOfExperience,
-            specialist.SpecialistCode
+            specialist.SpecialistCode,
+            Schedules = specialist.Schedules.Select(s => new
+            {
+                DayOfWeek = s.DayOfWeek.ToString(),
+                Attends = s.Attends,
+                TimeSlots = s.TimeSlots.Select(ts => new
+                {
+                    StartTime = ts.StartTime.ToString("HH:mm"),
+                    EndTime = ts.EndTime.ToString("HH:mm")
+                }).ToList()
+            }).ToList()
         };
         return Ok(response);
     }
@@ -93,24 +98,34 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
             .ToList();
         var totalCount = _specialistService.GetAllSpecialists().Count();
 
-        var response = specialists.Select(specialists => new
+        var response = specialists.Select(specialist => new
         {
-            specialists.Id,
-            specialists.Names,
-            specialists.LastNamePaternal,
-            specialists.LastNameMaternal,
-            specialists.MobileNumber,
-            specialists.IdentityCard,
-            specialists.PhoneNumber,
-            specialists.Age,
-            specialists.Gender,
-            specialists.DateOfBirth,
-            specialists.Address,
-            specialists.Email,
-            specialists.Password,
-            specialty = specialists.Specialty?.TypeOfSpecialty,
-            specialists.YearsOfExperience,
-            specialists.SpecialistCode
+            specialist.Id,
+            specialist.Names,
+            specialist.LastNamePaternal,
+            specialist.LastNameMaternal,
+            specialist.MobileNumber,
+            specialist.IdentityCard,
+            specialist.PhoneNumber,
+            specialist.Age,
+            specialist.Gender,
+            specialist.DateOfBirth,
+            specialist.Address,
+            specialist.Email,
+            specialist.Password,
+            specialty = specialist.Specialty?.TypeOfSpecialty,
+            specialist.YearsOfExperience,
+            specialist.SpecialistCode,
+            Schedules = specialist.Schedules.Select(s => new
+            {
+                DayOfWeek = s.DayOfWeek.ToString(),
+                Attends = s.Attends,
+                TimeSlots = s.TimeSlots.Select(ts => new
+                {
+                    StartTime = ts.StartTime.ToString("HH:mm"),
+                    EndTime = ts.EndTime.ToString("HH:mm")
+                }).ToList()
+            }).ToList()
         });
 
         return Ok(new
