@@ -1,7 +1,4 @@
-using DotNetEnv;
 using E_Dukate.Presentation.Configuration;
-
-Env.Load("../.env");
 
 var builder = WebApplication.CreateBuilder(args);
 
