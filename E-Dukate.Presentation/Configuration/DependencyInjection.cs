@@ -9,6 +9,10 @@ using E_Dukate.Application.Validators.Specialties;
 using E_Dukate.Application.DTOs.Users;
 using E_Dukate.Application.DTOs.Specialties;
 using FluentValidation;
+using E_Dukate.Domain.Entities.Schedules;
+using E_Dukate.Application.Services;
+using E_Dukate.Application.DTOs.Schedules;
+using E_Dukate.Application.Validators;
 
 namespace E_Dukate.Presentation.Configuration;
 
@@ -28,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<IGenericRepository<Specialist>, GenericRepository<Specialist>>();
         services.AddScoped<IGenericRepository<Patient>, GenericRepository<Patient>>();
         services.AddScoped<IGenericRepository<Specialty>, GenericRepository<Specialty>>();
+        services.AddScoped<IGenericRepository<Schedule>, GenericRepository<Schedule>>(); // Agregar Schedule
         return services;
     }
 
@@ -38,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<PatientService>();
         services.AddScoped<SpecialtyService>();
         services.AddScoped<UserService>();
+        services.AddScoped<ScheduleService>();
         return services;
     }
 
@@ -47,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<SpecialistDto>, SpecialistValidator>();
         services.AddScoped<IValidator<PatientDto>, PatientValidator>();
         services.AddScoped<IValidator<SpecialtyDto>, SpecialtyValidator>();
+        services.AddScoped<IValidator<ScheduleDto>, ScheduleValidator>();
         return services;
     }
 }
