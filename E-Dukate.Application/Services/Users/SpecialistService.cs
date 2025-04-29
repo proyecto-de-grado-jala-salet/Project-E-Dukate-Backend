@@ -39,7 +39,7 @@ public class SpecialistService : BaseService<Specialist, SpecialistDto>
             .FirstOrDefault(s => s.TypeOfSpecialty == dto.TypeOfSpecialty)
             ?? throw new Exception("The chosen specialty does not exist");
 
-        var specialist = new Specialist
+        return new Specialist
         {
             Names = dto.Names,
             LastNamePaternal = dto.LastNamePaternal,
@@ -57,25 +57,6 @@ public class SpecialistService : BaseService<Specialist, SpecialistDto>
             YearsOfExperience = dto.YearsOfExperience,
             SpecialistCode = dto.SpecialistCode
         };
-
-        foreach (var scheduleDto in dto.Schedules)
-        {
-            var dayOfWeek = Enum.Parse<DayOfWeek>(scheduleDto.DayOfWeek, true);
-            var schedule = new Schedule
-            {
-                Specialist = specialist,
-                DayOfWeek = dayOfWeek,
-                Attends = scheduleDto.Attends,
-                TimeSlots = scheduleDto.TimeSlots.Select(ts => new TimeSlot
-                {
-                    StartTime = TimeOnly.Parse(ts.StartTime),
-                    EndTime = TimeOnly.Parse(ts.EndTime)
-                }).ToList()
-            };
-            specialist.Schedules.Add(schedule);
-        }
-
-        return specialist;
     }
 
     protected override void UpdateEntity(Specialist entity, SpecialistDto dto)
@@ -99,23 +80,5 @@ public class SpecialistService : BaseService<Specialist, SpecialistDto>
         entity.Specialty = specialty;
         entity.YearsOfExperience = dto.YearsOfExperience;
         entity.SpecialistCode = dto.SpecialistCode;
-        
-        entity.Schedules.Clear();
-        foreach (var scheduleDto in dto.Schedules)
-        {
-            var dayOfWeek = Enum.Parse<DayOfWeek>(scheduleDto.DayOfWeek, true);
-            var schedule = new Schedule
-            {
-                Specialist = entity,
-                DayOfWeek = dayOfWeek,
-                Attends = scheduleDto.Attends,
-                TimeSlots = scheduleDto.TimeSlots.Select(ts => new TimeSlot
-                {
-                    StartTime = TimeOnly.Parse(ts.StartTime),
-                    EndTime = TimeOnly.Parse(ts.EndTime)
-                }).ToList()
-            };
-            entity.Schedules.Add(schedule);
-        }
     }
 }
