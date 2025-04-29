@@ -24,7 +24,13 @@ public class GenericRepository<T> : IGenericRepository<T> where T : Entity
 
     public void Update(T entity)
     {
-        _entities.Update(entity);
+        var existingEntity = _entities.Find(entity.Id);
+        if (existingEntity == null)
+        {
+            throw new Exception($"{typeof(T).Name} with ID {entity.Id} not found.");
+        }
+
+        _context.Entry(existingEntity).CurrentValues.SetValues(entity);
         _context.SaveChanges();
     }
 

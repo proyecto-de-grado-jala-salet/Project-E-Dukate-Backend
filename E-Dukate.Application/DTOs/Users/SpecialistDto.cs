@@ -9,5 +9,4 @@ public class SpecialistDto : BaseUserDto
     public required string TypeOfSpecialty { get; set; }
     public required int YearsOfExperience { get; set; }
     public required string SpecialistCode { get; set; }
-    public List<ScheduleDto> Schedules { get; set; } = new List<ScheduleDto>();
 }
