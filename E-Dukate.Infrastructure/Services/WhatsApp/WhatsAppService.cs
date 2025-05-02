@@ -33,7 +33,7 @@ public class WhatsAppService : IWhatsAppService
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task SendInteractiveMessageAsync(string phoneNumber, string message, string buttonText)
+    public async Task SendInteractiveMessageAsync(string phoneNumber, string message, string buttonId, string buttonTitle)
     {
         var payload = new
         {
@@ -48,27 +48,31 @@ public class WhatsAppService : IWhatsAppService
                 {
                     buttons = new[]
                     {
-                    new
-                    {
-                        type = "reply",
-                        reply = new
+                        new
                         {
-                            id = "btn_obtener_mensaje",
-                            title = buttonText
+                            type = "reply",
+                            reply = new
+                            {
+                                id = buttonId,
+                                title = buttonTitle
+                            }
                         }
                     }
                 }
-                }
             }
         };
-
-        var payloadJson = System.Text.Json.JsonSerializer.Serialize(payload, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
 
         var response = await _httpClient.PostAsJsonAsync($"{_phoneNumberId}/messages", payload);
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task SendInteractiveListMessageAsync(string phoneNumber, string message, List<(string Id, string Title)> listItems)
+    public async Task SendInteractiveListMessageAsync(
+        string phoneNumber,
+        string message,
+        string header,
+        string footer,
+        string sectionTitle,
+        List<(string Id, string Title, string Description)> listItems)
     {
         var payload = new
         {
@@ -78,9 +82,9 @@ public class WhatsAppService : IWhatsAppService
             interactive = new
             {
                 type = "list",
-                header = new { type = "text", text = "Menú de Comidas" },
+                header = new { type = "text", text = header },
                 body = new { text = message },
-                footer = new { text = "Selecciona una opción" },
+                footer = new { text = footer },
                 action = new
                 {
                     button = "Ver opciones",
@@ -88,12 +92,12 @@ public class WhatsAppService : IWhatsAppService
                     {
                         new
                         {
-                            title = "Comidas disponibles",
+                            title = sectionTitle,
                             rows = listItems.Select(item => new
                             {
                                 id = item.Id,
                                 title = item.Title,
-                                description = $"Selecciona {item.Title}"
+                                description = item.Description
                             }).ToArray()
                         }
                     }
