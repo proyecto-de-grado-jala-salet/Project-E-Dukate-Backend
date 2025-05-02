@@ -15,23 +15,33 @@ public class ChatBotService : IChatBotService
 
     public async Task ProcessMessageAsync(string phoneNumber, string message)
     {
-        var foodItems = new List<(string Id, string Title)>
-        {
-            ("zapallo", "Zapallo"),
-            ("sopa", "Sopa"),
-            ("pollo", "Pollo")
-        };
-
         Console.WriteLine($"Processing message: '{message}' for phone: {phoneNumber}");
 
-        if (foodItems.Any(item => item.Title.Equals(message, StringComparison.OrdinalIgnoreCase)))
+        var foodItems = new List<(string Id, string Title, string Description)>
         {
-            string responseMessage = $"Ok, seleccionaste {message} como mensaje de WhatsApp.";
-            Console.WriteLine($"Sending confirmation: {responseMessage}");
-            await _whatsAppService.SendTextMessageAsync(phoneNumber, responseMessage);
-            return;
+            ("zapallo", "Zapallo", "Delicioso zapallo asado"),
+            ("sopa", "Sopa", "Sopa casera caliente"),
+            ("pollo", "Pollo", "Pollo a la parrilla")
+        };
+
+        if (!string.IsNullOrEmpty(message))
+        {
+            if (foodItems.Any(item => item.Title.Equals(message, StringComparison.OrdinalIgnoreCase)))
+            {
+                string responseMessage = $"Ok, seleccionaste {message} como mensaje de WhatsApp.";
+                Console.WriteLine($"Sending confirmation: {responseMessage}");
+                await _whatsAppService.SendTextMessageAsync(phoneNumber, responseMessage);
+                return;
+            }
+
+            if (message.Equals("Obtener Mensaje", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("Detected 'Obtener Mensaje'. Sending default message.");
+                await _whatsAppService.SendTextMessageAsync(phoneNumber, "¡Aquí tienes tu mensaje! Gracias por interactuar.");
+                return;
+            }
         }
-        
+
         var intent = await _dialogflowService.DetectIntentAsync(phoneNumber, message);
 
         if (intent == "Greeting")
@@ -40,6 +50,7 @@ public class ChatBotService : IChatBotService
             await _whatsAppService.SendInteractiveMessageAsync(
                 phoneNumber,
                 "¡Hola! Bienvenido(a) al chatbot de E-Dukate. ¿Cómo puedo ayudarte?",
+                "greeting_button",
                 "Obtener Mensaje"
             );
         }
@@ -49,13 +60,11 @@ public class ChatBotService : IChatBotService
             await _whatsAppService.SendInteractiveListMessageAsync(
                 phoneNumber,
                 "Por favor, selecciona una comida de la lista:",
+                "Menú de Comidas",
+                "Elige tu favorita",
+                "Comidas Disponibles",
                 foodItems
             );
-        }
-        else if (message == "Obtener Mensaje")
-        {
-            Console.WriteLine("Detected 'Obtener Mensaje'. Sending default message.");
-            await _whatsAppService.SendTextMessageAsync(phoneNumber, "¡Aquí tienes tu mensaje! Gracias por interactuar.");
         }
         else
         {
