@@ -12,11 +12,14 @@ using FluentValidation;
 using E_Dukate.Domain.Entities.Schedules;
 using E_Dukate.Application.Services;
 using E_Dukate.Application.Validators;
-using E_Dukate.Application.Interfaces;
 using E_Dukate.Application.Services.WhatsApp;
 using E_Dukate.Infrastructure.Services;
 using E_Dukate.Application.DTOs.Schedules;
 using E_Dukate.Application.Interfaces.WhatsApp;
+using E_Dukate.Application.Interfaces.GoogleCalendar;
+using E_Dukate.Application.Services.WhatsApp.Handlers;
+using E_Dukate.Application.Services.WhatsApp.Utilities;
+using E_Dukate.Infrastructure.Services.GoogleCalendar;
 
 namespace E_Dukate.Presentation.Configuration;
 
@@ -28,7 +31,8 @@ public static class DependencyInjection
             .AddRepositories()
             .AddServices()
             .AddValidators()
-            .AddChatBotServices();
+            .AddChatBotServices()
+            .AddGoogleCalendarServices();
     }
 
     private static IServiceCollection AddRepositories(this IServiceCollection services)
@@ -49,6 +53,17 @@ public static class DependencyInjection
         services.AddScoped<SpecialtyService>();
         services.AddScoped<UserService>();
         services.AddScoped<ScheduleService>();
+        services.AddScoped<StartAppointmentHandler>();
+        services.AddScoped<AskNameHandler>();
+        services.AddScoped<AskLastNamePaternalHandler>();
+        services.AddScoped<AskIdentityCardHandler>();
+        services.AddScoped<AskDateOfBirthHandler>();
+        services.AddScoped<AskGenderHandler>();
+        services.AddScoped<AskAddressHandler>();
+        services.AddScoped<ShowSpecialtiesHandler>();
+        services.AddScoped<ShowSpecialistsHandler>();
+        services.AddScoped<ShowSchedulesHandler>();
+        services.AddSingleton<IConversationStateManager, ConversationStateManager>();
         return services;
     }
 
@@ -64,10 +79,16 @@ public static class DependencyInjection
 
     private static IServiceCollection AddChatBotServices(this IServiceCollection services)
     {
-        services.AddScoped<IChatBotService, ChatBotService>();
-        services.AddScoped<IWhatsAppService, WhatsAppService>();
-        services.AddScoped<IDialogflowService, DialogflowService>();
+        services.AddSingleton<IChatBotService, ChatBotService>();
+        services.AddSingleton<IWhatsAppService, WhatsAppService>();
+        services.AddSingleton<IDialogflowService, DialogflowService>();
         services.AddHttpClient();
+        return services;
+    }
+
+    private static IServiceCollection AddGoogleCalendarServices(this IServiceCollection services)
+    {
+        services.AddSingleton<IGoogleCalendarService, GoogleCalendarService>();
         return services;
     }
 }
