@@ -1,75 +1,56 @@
 using E_Dukate.Application.Interfaces.WhatsApp;
+using E_Dukate.Application.Services.WhatsApp.Handlers;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace E_Dukate.Application.Services.WhatsApp;
 
 public class ChatBotService : IChatBotService
 {
-    private readonly IWhatsAppService _whatsAppService;
-    private readonly IDialogflowService _dialogflowService;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly Dictionary<ConversationStep, Type> _handlerTypes;
 
-    public ChatBotService(IWhatsAppService whatsAppService, IDialogflowService dialogflowService)
+    public ChatBotService(
+        IServiceScopeFactory scopeFactory)
     {
-        _whatsAppService = whatsAppService;
-        _dialogflowService = dialogflowService;
+        _scopeFactory = scopeFactory;
+
+        _handlerTypes = new Dictionary<ConversationStep, Type>
+        {
+            { ConversationStep.None, typeof(StartAppointmentHandler) },
+            { ConversationStep.AskName, typeof(AskNameHandler) },
+            { ConversationStep.AskLastNamePaternal, typeof(AskLastNamePaternalHandler) },
+            { ConversationStep.AskIdentityCard, typeof(AskIdentityCardHandler) },
+            { ConversationStep.AskDateOfBirth, typeof(AskDateOfBirthHandler) },
+            { ConversationStep.AskGender, typeof(AskGenderHandler) },
+            { ConversationStep.AskAddress, typeof(AskAddressHandler) },
+            { ConversationStep.ShowSpecialties, typeof(ShowSpecialtiesHandler) },
+            { ConversationStep.ShowSpecialists, typeof(ShowSpecialistsHandler) },
+            { ConversationStep.ShowSchedules, typeof(ShowSchedulesHandler) },
+            { ConversationStep.ShowMoreSchedules, typeof(ShowSchedulesHandler) }
+        };
     }
 
     public async Task ProcessMessageAsync(string phoneNumber, string message)
     {
-        Console.WriteLine($"Processing message: '{message}' for phone: {phoneNumber}");
+        using var scope = _scopeFactory.CreateScope();
+        var stateManager = scope.ServiceProvider.GetRequiredService<IConversationStateManager>();
+        var state = stateManager.GetOrCreateState(phoneNumber);
 
-        var foodItems = new List<(string Id, string Title, string Description)>
+        if (_handlerTypes.TryGetValue(state.Step, out var handlerType))
         {
-            ("zapallo", "Zapallo", "Delicioso zapallo asado"),
-            ("sopa", "Sopa", "Sopa casera caliente"),
-            ("pollo", "Pollo", "Pollo a la parrilla")
-        };
+            var handler = (IConversationStateHandler)scope.ServiceProvider.GetRequiredService(handlerType);
+            await handler.HandleAsync(phoneNumber, message, state);
 
-        if (!string.IsNullOrEmpty(message))
-        {
-            if (foodItems.Any(item => item.Title.Equals(message, StringComparison.OrdinalIgnoreCase)))
+            stateManager.UpdateState(phoneNumber, state);
+
+            if (state.Step == ConversationStep.None)
             {
-                string responseMessage = $"Ok, seleccionaste {message} como mensaje de WhatsApp.";
-                Console.WriteLine($"Sending confirmation: {responseMessage}");
-                await _whatsAppService.SendTextMessageAsync(phoneNumber, responseMessage);
-                return;
+                stateManager.RemoveState(phoneNumber);
             }
-
-            if (message.Equals("Obtener Mensaje", StringComparison.OrdinalIgnoreCase))
-            {
-                Console.WriteLine("Detected 'Obtener Mensaje'. Sending default message.");
-                await _whatsAppService.SendTextMessageAsync(phoneNumber, "¡Aquí tienes tu mensaje! Gracias por interactuar.");
-                return;
-            }
-        }
-
-        var intent = await _dialogflowService.DetectIntentAsync(phoneNumber, message);
-
-        if (intent == "Greeting")
-        {
-            Console.WriteLine("Detected Greeting intent.");
-            await _whatsAppService.SendInteractiveMessageAsync(
-                phoneNumber,
-                "¡Hola! Bienvenido(a) al chatbot de E-Dukate. ¿Cómo puedo ayudarte?",
-                "greeting_button",
-                "Obtener Mensaje"
-            );
-        }
-        else if (intent == "ShowFoods" || message.ToLower() == "mostrar comidas")
-        {
-            Console.WriteLine("Detected ShowFoods intent or 'mostrar comidas'. Sending food list.");
-            await _whatsAppService.SendInteractiveListMessageAsync(
-                phoneNumber,
-                "Por favor, selecciona una comida de la lista:",
-                "Menú de Comidas",
-                "Elige tu favorita",
-                "Comidas Disponibles",
-                foodItems
-            );
         }
         else
         {
-            Console.WriteLine("Unrecognized message or intent. Sending fallback response.");
-            await _whatsAppService.SendTextMessageAsync(phoneNumber, "No entendí tu mensaje. Intenta saludar con 'hola' o di 'mostrar comidas' para ver las opciones.");
+            throw new InvalidOperationException($"No handler found for step {state.Step}");
         }
     }
 }

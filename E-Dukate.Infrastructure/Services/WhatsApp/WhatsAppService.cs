@@ -1,6 +1,8 @@
 using E_Dukate.Application.Interfaces.WhatsApp;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text;
 
 namespace E_Dukate.Infrastructure.Services;
 
@@ -30,7 +32,10 @@ public class WhatsAppService : IWhatsAppService
         };
 
         var response = await _httpClient.PostAsJsonAsync($"{_phoneNumberId}/messages", payload);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            response.EnsureSuccessStatusCode();
+        }
     }
 
     public async Task SendInteractiveMessageAsync(string phoneNumber, string message, string buttonId, string buttonTitle)
@@ -63,7 +68,10 @@ public class WhatsAppService : IWhatsAppService
         };
 
         var response = await _httpClient.PostAsJsonAsync($"{_phoneNumberId}/messages", payload);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            response.EnsureSuccessStatusCode();
+        }
     }
 
     public async Task SendInteractiveListMessageAsync(
@@ -74,6 +82,21 @@ public class WhatsAppService : IWhatsAppService
         string sectionTitle,
         List<(string Id, string Title, string Description)> listItems)
     {
+        if (listItems == null || !listItems.Any())
+            throw new ArgumentException("List items cannot be empty.");
+
+        foreach (var item in listItems)
+        {
+            if (string.IsNullOrEmpty(item.Id) || item.Id.Length > 200)
+                throw new ArgumentException($"Invalid ID: {item.Id}. Must be non-empty and less than 200 characters.");
+            if (string.IsNullOrEmpty(item.Title) || item.Title.Length > 24)
+                throw new ArgumentException($"Invalid Title: {item.Title}. Must be non-empty and less than 24 characters.");
+            if (item.Description != null && item.Description.Length > 72)
+                throw new ArgumentException($"Invalid Description: {item.Description}. Must be less than 72 characters.");
+        }
+        
+        sectionTitle = Truncate(sectionTitle, 24);
+
         var payload = new
         {
             messaging_product = "whatsapp",
@@ -105,7 +128,20 @@ public class WhatsAppService : IWhatsAppService
             }
         };
 
-        var response = await _httpClient.PostAsJsonAsync($"{_phoneNumberId}/messages", payload);
-        response.EnsureSuccessStatusCode();
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync($"{_phoneNumberId}/messages", content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            response.EnsureSuccessStatusCode();
+        }
+    }
+
+    private string Truncate(string value, int maxLength)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        return value.Length <= maxLength ? value : value.Substring(0, maxLength);
     }
 }
