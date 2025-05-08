@@ -3,6 +3,8 @@ using E_Dukate.Application.Services.Users;
 using E_Dukate.Application.DTOs.Users;
 using E_Dukate.Application.DTOs.Common;
 using E_Dukate.Domain.Entities.Users;
+using E_Dukate.Domain.Entities.Auth;
+using E_Dukate.Domain.Interfaces;
 using FluentValidation;
 
 namespace E_Dukate.Presentation.Controllers.Users;
@@ -10,10 +12,15 @@ namespace E_Dukate.Presentation.Controllers.Users;
 public class SpecialistsController : BaseController<Specialist, SpecialistDto>
 {
     private readonly SpecialistService _specialistService;
+    private readonly IGenericRepository<UserAuth> _userAuthRepository;
 
-    public SpecialistsController(SpecialistService service) : base(service)
+    public SpecialistsController(
+        SpecialistService service,
+        IGenericRepository<UserAuth> userAuthRepository)
+        : base(service)
     {
         _specialistService = service;
+        _userAuthRepository = userAuthRepository;
     }
 
     [HttpPost]
@@ -57,6 +64,9 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
         var specialist = _specialistService.GetSpecialistById(id);
         if (specialist == null) return NotFound();
 
+        var userAuth = _userAuthRepository.GetAll()
+            .FirstOrDefault(u => u.UserId == id && u.UserRole == "Specialist");
+
         var response = new
         {
             specialist.Id,
@@ -70,9 +80,8 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
             specialist.Gender,
             specialist.DateOfBirth,
             specialist.Address,
-            specialist.Email,
-            specialist.Password,
-            specialty = specialist.Specialty?.TypeOfSpecialty,
+            Email = userAuth?.Email ?? string.Empty,
+            Specialty = specialist.Specialty?.TypeOfSpecialty,
             specialist.YearsOfExperience,
             specialist.SpecialistCode,
             Schedules = specialist.Schedules.Select(s => new
@@ -98,6 +107,10 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
             .ToList();
         var totalCount = _specialistService.GetAllSpecialists().Count();
 
+        var userAuths = _userAuthRepository.GetAll()
+            .Where(u => u.UserRole == "Specialist")
+            .ToDictionary(u => u.UserId, u => u.Email);
+
         var response = specialists.Select(specialist => new
         {
             specialist.Id,
@@ -111,9 +124,8 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
             specialist.Gender,
             specialist.DateOfBirth,
             specialist.Address,
-            specialist.Email,
-            specialist.Password,
-            specialty = specialist.Specialty?.TypeOfSpecialty,
+            Email = userAuths.ContainsKey(specialist.Id) ? userAuths[specialist.Id] : string.Empty,
+            Specialty = specialist.Specialty?.TypeOfSpecialty,
             specialist.YearsOfExperience,
             specialist.SpecialistCode,
             Schedules = specialist.Schedules.Select(s => new

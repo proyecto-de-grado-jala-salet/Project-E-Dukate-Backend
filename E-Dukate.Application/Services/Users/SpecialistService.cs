@@ -4,21 +4,83 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using E_Dukate.Domain.Entities.Users;
 using E_Dukate.Domain.Entities.Specialties;
-using E_Dukate.Domain.Entities.Schedules;
+using E_Dukate.Domain.Entities.Auth;
+using E_Dukate.Application.Services.Auth;
+using E_Dukate.Domain.Primitives;
 
 namespace E_Dukate.Application.Services.Users;
 
 public class SpecialistService : BaseService<Specialist, SpecialistDto>
 {
     private readonly IGenericRepository<Specialty> _specialtyRepository;
+    private readonly IGenericRepository<UserAuth> _userAuthRepository;
+    private readonly AuthService _authService;
 
     public SpecialistService(
         IGenericRepository<Specialist> repository,
         IGenericRepository<Specialty> specialtyRepository,
-        IValidator<SpecialistDto> validator)
+        IGenericRepository<UserAuth> userAuthRepository,
+        IValidator<SpecialistDto> validator,
+        AuthService authService)
         : base(repository, validator)
     {
         _specialtyRepository = specialtyRepository;
+        _userAuthRepository = userAuthRepository;
+        _authService = authService;
+    }
+
+    public override Result Register(SpecialistDto dto)
+    {
+        var validationResult = Validator.Validate(dto);
+        if (!validationResult.IsValid)
+            return Result.Failure(string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
+
+        var existingAuth = _userAuthRepository.GetAll().FirstOrDefault(u => u.Email == dto.Email);
+        if (existingAuth != null)
+            return Result.Failure("El correo ya está registrado.");
+
+        var specialist = MapToEntity(dto);
+        Repository.Add(specialist);
+
+        var userAuth = new UserAuth
+        {
+            UserId = specialist.Id,
+            UserRole = "Specialist",
+            Email = dto.Email,
+            PasswordHash = _authService.HashPassword(dto.Password)
+        };
+        _userAuthRepository.Add(userAuth);
+
+        return Result.Success();
+    }
+
+    public override Result Update(Guid id, SpecialistDto dto)
+    {
+        var validationResult = Validator.Validate(dto);
+        if (!validationResult.IsValid)
+            return Result.Failure(string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
+
+        var existing = Repository.GetById(id);
+        if (existing == null)
+            return Result.Failure("Especialista no encontrado.");
+
+        var existingAuth = _userAuthRepository.GetAll().FirstOrDefault(u => u.UserId == id && u.UserRole == "Specialist");
+        if (existingAuth == null)
+            return Result.Failure("Registro de autenticación no encontrado.");
+
+        var duplicateAuth = _userAuthRepository.GetAll().FirstOrDefault(u => u.Email == dto.Email && u.Id != existingAuth.Id);
+        if (duplicateAuth != null)
+            return Result.Failure("El correo ya está registrado por otro usuario.");
+
+        UpdateEntity(existing, dto);
+        Repository.Update(existing);
+
+        existingAuth.Email = dto.Email;
+        if (!string.IsNullOrEmpty(dto.Password))
+            existingAuth.PasswordHash = _authService.HashPassword(dto.Password);
+        _userAuthRepository.Update(existingAuth);
+
+        return Result.Success();
     }
 
     public Specialist? GetSpecialistById(Guid id) =>
@@ -51,8 +113,6 @@ public class SpecialistService : BaseService<Specialist, SpecialistDto>
             Gender = dto.Gender,
             DateOfBirth = dto.DateOfBirth,
             Address = dto.Address,
-            Email = dto.Email,
-            Password = dto.Password,
             Specialty = specialty,
             YearsOfExperience = dto.YearsOfExperience,
             SpecialistCode = dto.SpecialistCode
@@ -75,8 +135,6 @@ public class SpecialistService : BaseService<Specialist, SpecialistDto>
         entity.Gender = dto.Gender;
         entity.DateOfBirth = dto.DateOfBirth;
         entity.Address = dto.Address;
-        entity.Email = dto.Email;
-        entity.Password = dto.Password;
         entity.Specialty = specialty;
         entity.YearsOfExperience = dto.YearsOfExperience;
         entity.SpecialistCode = dto.SpecialistCode;

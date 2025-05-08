@@ -20,6 +20,10 @@ using E_Dukate.Application.Interfaces.GoogleCalendar;
 using E_Dukate.Application.Services.WhatsApp.Handlers;
 using E_Dukate.Application.Services.WhatsApp.Utilities;
 using E_Dukate.Infrastructure.Services.GoogleCalendar;
+using E_Dukate.Application.Services.Auth;
+using E_Dukate.Application.Validators.Auth;
+using E_Dukate.Application.DTOs.Auth;
+using E_Dukate.Domain.Entities.Auth;
 
 namespace E_Dukate.Presentation.Configuration;
 
@@ -42,6 +46,8 @@ public static class DependencyInjection
         services.AddScoped<IGenericRepository<Patient>, GenericRepository<Patient>>();
         services.AddScoped<IGenericRepository<Specialty>, GenericRepository<Specialty>>();
         services.AddScoped<IGenericRepository<Schedule>, GenericRepository<Schedule>>();
+        services.AddScoped<IGenericRepository<LoginLog>, GenericRepository<LoginLog>>();
+        services.AddScoped<IGenericRepository<UserAuth>, GenericRepository<UserAuth>>();
         return services;
     }
 
@@ -53,6 +59,7 @@ public static class DependencyInjection
         services.AddScoped<SpecialtyService>();
         services.AddScoped<UserService>();
         services.AddScoped<ScheduleService>();
+        services.AddScoped<AuthService>();
         services.AddScoped<StartAppointmentHandler>();
         services.AddScoped<AskNameHandler>();
         services.AddScoped<AskLastNamePaternalHandler>();
@@ -74,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<PatientDto>, PatientValidator>();
         services.AddScoped<IValidator<SpecialtyDto>, SpecialtyValidator>();
         services.AddScoped<IValidator<ScheduleDto>, ScheduleValidator>();
+        services.AddScoped<IValidator<LoginDto>, LoginValidator>();
         return services;
     }
 
