@@ -16,35 +16,40 @@ public class GenericRepository<T> : IGenericRepository<T> where T : Entity
         _entities = context.Set<T>();
     }
 
-    public void Add(T entity)
+    public async Task AddAsync(T entity)
     {
-        _entities.Add(entity);
-        _context.SaveChanges();
+        await _entities.AddAsync(entity);
+        await _context.SaveChangesAsync();
     }
 
-    public void Update(T entity)
+    public async Task UpdateAsync(T entity)
     {
-        var existingEntity = _entities.Find(entity.Id);
+        var existingEntity = await _entities.FindAsync(entity.Id);
         if (existingEntity == null)
         {
             throw new Exception($"{typeof(T).Name} with ID {entity.Id} not found.");
         }
 
         _context.Entry(existingEntity).CurrentValues.SetValues(entity);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
-    public void Delete(Guid id)
+    public async Task DeleteAsync(Guid id)
     {
-        var entity = _entities.Find(id);
+        var entity = await _entities.FindAsync(id);
         if (entity != null)
         {
             _entities.Remove(entity);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
         }
     }
 
-    public T? GetById(Guid id) => _entities.Find(id);
+    public async Task<T?> GetByIdAsync(Guid id) => await _entities.FindAsync(id);
 
-    public IQueryable<T> GetAll() => _entities.AsQueryable(); // Cambiado a IQueryable
+    public IQueryable<T> GetAll() => _entities.AsQueryable();
+    
+    public void Add(T entity) => AddAsync(entity).GetAwaiter().GetResult();
+    public void Update(T entity) => UpdateAsync(entity).GetAwaiter().GetResult();
+    public void Delete(Guid id) => DeleteAsync(id).GetAwaiter().GetResult();
+    public T? GetById(Guid id) => GetByIdAsync(id).GetAwaiter().GetResult();
 }

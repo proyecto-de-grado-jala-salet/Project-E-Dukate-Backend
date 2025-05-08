@@ -16,8 +16,6 @@ namespace E_Dukate.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Email = table.Column<string>(type: "text", nullable: false),
-                    Password = table.Column<string>(type: "text", nullable: false),
                     Names = table.Column<string>(type: "text", nullable: false),
                     LastNamePaternal = table.Column<string>(type: "text", nullable: false),
                     LastNameMaternal = table.Column<string>(type: "text", nullable: true),
@@ -32,6 +30,21 @@ namespace E_Dukate.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Administrators", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "LoginLogs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserRole = table.Column<string>(type: "text", nullable: false),
+                    LoginTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsSuccessful = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LoginLogs", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -68,12 +81,27 @@ namespace E_Dukate.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserAuths",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserRole = table.Column<string>(type: "text", nullable: false),
+                    Email = table.Column<string>(type: "text", nullable: false),
+                    PasswordHash = table.Column<string>(type: "text", nullable: false),
+                    FailedLoginAttempts = table.Column<int>(type: "integer", nullable: false),
+                    LockoutEnd = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserAuths", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Specialists",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Email = table.Column<string>(type: "text", nullable: false),
-                    Password = table.Column<string>(type: "text", nullable: false),
                     SpecialtyId = table.Column<Guid>(type: "uuid", nullable: false),
                     YearsOfExperience = table.Column<int>(type: "integer", nullable: false),
                     SpecialistCode = table.Column<string>(type: "text", nullable: false),
@@ -129,6 +157,12 @@ namespace E_Dukate.Infrastructure.Migrations
                 name: "IX_Specialists_SpecialtyId",
                 table: "Specialists",
                 column: "SpecialtyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserAuths_Email",
+                table: "UserAuths",
+                column: "Email",
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -138,10 +172,16 @@ namespace E_Dukate.Infrastructure.Migrations
                 name: "Administrators");
 
             migrationBuilder.DropTable(
+                name: "LoginLogs");
+
+            migrationBuilder.DropTable(
                 name: "Patients");
 
             migrationBuilder.DropTable(
                 name: "Schedules");
+
+            migrationBuilder.DropTable(
+                name: "UserAuths");
 
             migrationBuilder.DropTable(
                 name: "Specialists");

@@ -7,4 +7,8 @@ public interface IGenericRepository<T> where T : Primitives.Entity
     void Delete(Guid id);
     T? GetById(Guid id);
     IQueryable<T> GetAll();
+    Task AddAsync(T entity);
+    Task UpdateAsync(T entity);
+    Task DeleteAsync(Guid id);
+    Task<T?> GetByIdAsync(Guid id);
 }
