@@ -22,6 +22,65 @@ namespace E_Dukate.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Auth.LoginLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsSuccessful")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("LoginTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserRole")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LoginLogs", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Auth.UserAuth", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("FailedLoginAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LockoutEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserRole")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("UserAuths", (string)null);
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.Schedule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -79,10 +138,6 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.Property<DateOnly>("DateOfBirth")
                         .HasColumnType("date");
 
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Gender")
                         .IsRequired()
                         .HasColumnType("text");
@@ -102,10 +157,6 @@ namespace E_Dukate.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Names")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Password")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -179,10 +230,6 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.Property<DateOnly>("DateOfBirth")
                         .HasColumnType("date");
 
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Gender")
                         .IsRequired()
                         .HasColumnType("text");
@@ -202,10 +249,6 @@ namespace E_Dukate.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Names")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Password")
                         .IsRequired()
                         .HasColumnType("text");
 

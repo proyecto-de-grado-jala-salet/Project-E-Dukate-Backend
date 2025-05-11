@@ -2,6 +2,4 @@ namespace E_Dukate.Domain.Entities.Users;
 
 public class Administrator : User
 {
-    public required string Email { get; set; }
-    public required string Password { get; set; }
 }

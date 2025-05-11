@@ -1,10 +1,10 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using E_Dukate.Domain.Entities.Users;
 using E_Dukate.Domain.Entities.Specialties;
 using E_Dukate.Domain.Entities.Schedules;
+using E_Dukate.Domain.Entities.Auth;
 
 namespace E_Dukate.Infrastructure.Data;
 
@@ -15,6 +15,8 @@ public class AppDbContext : DbContext
     public DbSet<Patient> Patients { get; set; }
     public DbSet<Specialty> Specialties { get; set; }
     public DbSet<Schedule> Schedules { get; set; }
+    public DbSet<LoginLog> LoginLogs { get; set; }
+    public DbSet<UserAuth> UserAuths { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -25,6 +27,8 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Patient>().ToTable("Patients").HasKey(p => p.Id);
         modelBuilder.Entity<Specialty>().ToTable("Specialties").HasKey(s => s.Id);
         modelBuilder.Entity<Schedule>().ToTable("Schedules").HasKey(s => s.Id);
+        modelBuilder.Entity<LoginLog>().ToTable("LoginLogs").HasKey(l => l.Id);
+        modelBuilder.Entity<UserAuth>().ToTable("UserAuths").HasKey(u => u.Id);
 
         modelBuilder.Entity<Specialist>()
             .HasOne(s => s.Specialty)
@@ -46,5 +50,9 @@ public class AppDbContext : DbContext
                     c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.StartTime.GetHashCode(), v.EndTime.GetHashCode())),
                     c => c.ToList()
                 ));
+                
+        modelBuilder.Entity<UserAuth>()
+            .HasIndex(u => u.Email)
+            .IsUnique();
     }
 }
