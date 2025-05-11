@@ -24,6 +24,7 @@ using E_Dukate.Application.Services.Auth;
 using E_Dukate.Application.Validators.Auth;
 using E_Dukate.Application.DTOs.Auth;
 using E_Dukate.Domain.Entities.Auth;
+using E_Dukate.Application.Interfaces.Auth;
 
 namespace E_Dukate.Presentation.Configuration;
 
@@ -60,6 +61,9 @@ public static class DependencyInjection
         services.AddScoped<UserService>();
         services.AddScoped<ScheduleService>();
         services.AddScoped<AuthService>();
+        services.AddScoped<IUserProfileService, UserProfileService>();
+        services.AddScoped<JwtTokenGenerator>();
+        services.AddScoped<LoginLogger>();
         services.AddScoped<StartAppointmentHandler>();
         services.AddScoped<AskNameHandler>();
         services.AddScoped<AskLastNamePaternalHandler>();
@@ -82,6 +86,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<SpecialtyDto>, SpecialtyValidator>();
         services.AddScoped<IValidator<ScheduleDto>, ScheduleValidator>();
         services.AddScoped<IValidator<LoginDto>, LoginValidator>();
+        services.AddScoped<UserAuthValidator>();
         return services;
     }
 
