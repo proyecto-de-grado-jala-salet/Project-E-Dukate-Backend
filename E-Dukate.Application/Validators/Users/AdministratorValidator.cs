@@ -7,6 +7,9 @@ public class AdministratorValidator : BaseUserValidator<AdministratorDto>
 {
     public AdministratorValidator()
     {
+        RuleFor(x => x.Age)
+            .InclusiveBetween(18, 100).WithMessage("Age must be between 18 and 100.");
+            
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email is required.")
             .EmailAddress().WithMessage("Invalid email format.");
