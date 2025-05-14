@@ -7,5 +7,7 @@ public class PatientValidator : BaseUserValidator<PatientDto>
 {
     public PatientValidator()
     {
+        RuleFor(x => x.Age)
+            .InclusiveBetween(1, 100).WithMessage("Age must be between 1 and 100.");
     }
 }
