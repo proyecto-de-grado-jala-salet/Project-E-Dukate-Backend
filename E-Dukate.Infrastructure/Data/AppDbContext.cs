@@ -34,8 +34,38 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<LoginLog>().ToTable("LoginLogs").HasKey(l => l.Id);
         modelBuilder.Entity<UserAuth>().ToTable("UserAuths").HasKey(u => u.Id);
         modelBuilder.Entity<MedicalHistory>().ToTable("MedicalHistories").HasKey(mh => mh.Id);
-        modelBuilder.Entity<MedicalHistoryPermission>().ToTable("MedicalHistoryPermissions").HasKey(mhp => mhp.Id);
-        modelBuilder.Entity<MedicalConsultation>().ToTable("MedicalConsultations").HasKey(mc => mc.Id);
+        modelBuilder.Entity<MedicalHistoryPermission>().ToTable("MedicalHistoryPermissions").HasKey(p => p.Id);
+        modelBuilder.Entity<MedicalConsultation>().ToTable("MedicalConsultations").HasKey(c => c.Id);
+        
+        modelBuilder.Entity<Patient>()
+            .HasOne(p => p.MedicalHistory)
+            .WithOne(mh => mh.Patient)
+            .HasForeignKey<MedicalHistory>(mh => mh.PatientId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<MedicalHistory>()
+            .HasMany(mh => mh.Permissions)
+            .WithOne(p => p.MedicalHistory)
+            .HasForeignKey(p => p.MedicalHistoryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<MedicalHistoryPermission>()
+            .HasMany(p => p.Consultations)
+            .WithOne(c => c.Permission)
+            .HasForeignKey(c => c.PermissionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<MedicalHistoryPermission>()
+            .HasOne(p => p.Specialist)
+            .WithMany()
+            .HasForeignKey(p => p.SpecialistId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MedicalConsultation>()
+            .HasOne(c => c.Specialist)
+            .WithMany()
+            .HasForeignKey(c => c.SpecialistId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Specialist>()
             .HasOne(s => s.Specialty)
@@ -58,33 +88,9 @@ public class AppDbContext : DbContext
                     c => c.ToList()
                 ));
 
+        // Índice único para UserAuth
         modelBuilder.Entity<UserAuth>()
             .HasIndex(u => u.Email)
             .IsUnique();
-
-        modelBuilder.Entity<MedicalHistory>()
-            .HasOne(mh => mh.Patient)
-            .WithMany()
-            .HasForeignKey(mh => mh.PatientId);
-
-        modelBuilder.Entity<MedicalHistoryPermission>()
-            .HasOne(mhp => mhp.MedicalHistory)
-            .WithMany(mh => mh.Permissions)
-            .HasForeignKey(mhp => mhp.MedicalHistoryId);
-
-        modelBuilder.Entity<MedicalHistoryPermission>()
-            .HasOne(mhp => mhp.Specialist)
-            .WithMany()
-            .HasForeignKey(mhp => mhp.SpecialistId);
-
-        modelBuilder.Entity<MedicalConsultation>()
-            .HasOne(mc => mc.MedicalHistory)
-            .WithMany()
-            .HasForeignKey(mc => mc.MedicalHistoryId);
-
-        modelBuilder.Entity<MedicalConsultation>()
-            .HasOne(mc => mc.Specialist)
-            .WithMany()
-            .HasForeignKey(mc => mc.SpecialistId);
     }
 }
