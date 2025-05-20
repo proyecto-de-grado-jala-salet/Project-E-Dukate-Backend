@@ -72,6 +72,7 @@ public static class DependencyInjection
         services.AddScoped<JwtTokenGenerator>();
         services.AddScoped<LoginLogger>();
         services.AddScoped<MedicalHistoryService>();
+        services.AddScoped<MedicalConsultationService>();
         services.AddScoped<StartAppointmentHandler>();
         services.AddScoped<AskNameHandler>();
         services.AddScoped<AskLastNamePaternalHandler>();
@@ -94,7 +95,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<SpecialtyDto>, SpecialtyValidator>();
         services.AddScoped<IValidator<ScheduleDto>, ScheduleValidator>();
         services.AddScoped<IValidator<LoginDto>, LoginValidator>();
-        services.AddScoped<IValidator<MedicalHistoryDto>, MedicalHistoryValidator>();
+        services.AddScoped<IValidator<UpdateMedicalConsultationDto>, UpdateMedicalConsultationDtoValidator>();
         services.AddScoped<UserAuthValidator>();
         return services;
     }

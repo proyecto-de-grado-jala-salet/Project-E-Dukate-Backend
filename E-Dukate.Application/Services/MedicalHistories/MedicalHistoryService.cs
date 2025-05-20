@@ -1,71 +1,55 @@
-using E_Dukate.Domain.Interfaces;
-using E_Dukate.Application.DTOs.MedicalHistories;
-using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using E_Dukate.Domain.Entities.MedicalHistories;
 using E_Dukate.Domain.Entities.Users;
-using E_Dukate.Domain.Primitives;
-using Microsoft.EntityFrameworkCore;
+using E_Dukate.Domain.Interfaces;
+using E_Dukate.Application.DTOs.MedicalHistories;
 
 namespace E_Dukate.Application.Services.MedicalHistories;
 
-public class MedicalHistoryService : BaseService<MedicalHistory, MedicalHistoryDto>
+public class MedicalHistoryService
 {
-    private readonly IGenericRepository<Patient> _patientRepository;
     private readonly IGenericRepository<MedicalHistory> _medicalHistoryRepository;
+    private readonly IGenericRepository<Patient> _patientRepository;
+    private readonly IGenericRepository<MedicalHistoryPermission> _permissionRepository;
     private readonly IGenericRepository<Specialist> _specialistRepository;
 
     public MedicalHistoryService(
-        IGenericRepository<MedicalHistory> repository,
+        IGenericRepository<MedicalHistory> medicalHistoryRepository,
         IGenericRepository<Patient> patientRepository,
-        IGenericRepository<Specialist> specialistRepository,
-        IValidator<MedicalHistoryDto> validator)
-        : base(repository, validator)
+        IGenericRepository<MedicalHistoryPermission> permissionRepository,
+        IGenericRepository<Specialist> specialistRepository)
     {
+        _medicalHistoryRepository = medicalHistoryRepository;
         _patientRepository = patientRepository;
-        _medicalHistoryRepository = repository;
+        _permissionRepository = permissionRepository;
         _specialistRepository = specialistRepository;
     }
 
-    public Result CreateForPatient(Guid patientId)
+    public async Task<MedicalHistoryDto?> GetByPatientIdAsync(Guid patientId)
     {
-        var patient = _patientRepository.GetById(patientId);
-        if (patient == null)
-            return Result.Failure("Paciente no encontrado.");
+        if (!await _patientRepository.GetAll().AnyAsync(p => p.Id == patientId))
+            return null;
 
-        var existingHistory = Repository.GetAll().FirstOrDefault(mh => mh.PatientId == patientId);
-        if (existingHistory != null)
-            return Result.Failure("El paciente ya tiene un historial médico.");
-
-        var medicalHistory = new MedicalHistory
-        {
-            PatientId = patientId,
-            Patient = patient
-        };
-
-        Repository.Add(medicalHistory);
-        return Result.Success();
-    }
-
-    public async Task<ValueResult<MedicalHistoryDto>> GetByPatientIdAsync(Guid patientId)
-    {
         var medicalHistory = await _medicalHistoryRepository.GetAll()
             .Include(mh => mh.Permissions)
-            .ThenInclude(p => p.Consultations)
+                .ThenInclude(p => p.Consultations)
             .FirstOrDefaultAsync(mh => mh.PatientId == patientId);
 
-        if (medicalHistory == null)
-            return ValueResult<MedicalHistoryDto>.Failure("Historial médico no encontrado para el paciente.");
+        if (medicalHistory == null) return null;
 
-        var response = new MedicalHistoryDto
+        return new MedicalHistoryDto
         {
+            Id = medicalHistory.Id,
             PatientId = medicalHistory.PatientId,
-            MedicalHistoryPermissions = medicalHistory.Permissions.Select(p => new MedicalHistoryPermissionDto
+            Permissions = medicalHistory.Permissions.Select(p => new MedicalHistoryPermissionDto
             {
+                Id = p.Id,
                 SpecialistId = p.SpecialistId,
                 CanEdit = p.CanEdit,
-                Status = p.Status,
-                MedicalConsultations = p.Consultations.Select(c => new MedicalConsultationDto
+                Status = p.Status.ToString(),
+                Consultations = p.Consultations.Select(c => new MedicalConsultationDto
                 {
+                    Id = c.Id,
                     SpecialistId = c.SpecialistId,
                     Reason = c.Reason,
                     ConsultationDate = c.ConsultationDate,
@@ -73,100 +57,64 @@ public class MedicalHistoryService : BaseService<MedicalHistory, MedicalHistoryD
                 }).ToList()
             }).ToList()
         };
-
-        return ValueResult<MedicalHistoryDto>.Success(response);
     }
 
-    protected override MedicalHistory MapToEntity(MedicalHistoryDto dto)
+    public async Task<bool> UpdateEditingPermissionAsync(PermissionRequestDto request)
     {
-        var patient = _patientRepository.GetById(dto.PatientId)
-            ?? throw new Exception("Paciente no encontrado.");
+        var medicalHistory = await _medicalHistoryRepository.GetByIdAsync(request.MedicalHistoryId);
+        if (medicalHistory == null) return false;
 
-        var medicalHistory = new MedicalHistory
+        var specialist = await _specialistRepository.GetByIdAsync(request.SpecialistId);
+        if (specialist == null) return false;
+
+        var existingPermission = await _permissionRepository.GetAll()
+            .FirstOrDefaultAsync(p =>
+                p.MedicalHistoryId == request.MedicalHistoryId &&
+                p.SpecialistId == request.SpecialistId);
+
+        if (existingPermission != null)
         {
-            PatientId = dto.PatientId,
-            Patient = patient
-        };
-
-        medicalHistory.Permissions = dto.MedicalHistoryPermissions.Select(p =>
+            existingPermission.CanEdit = request.CanEdit;
+            await _permissionRepository.UpdateAsync(existingPermission);
+        }
+        else
         {
-            var specialist = _specialistRepository.GetById(p.SpecialistId)
-                ?? throw new Exception($"Especialista con ID {p.SpecialistId} no encontrado.");
-
-            var permission = new MedicalHistoryPermission
+            var newPermission = new MedicalHistoryPermission
             {
+                MedicalHistoryId = request.MedicalHistoryId,
+                SpecialistId = request.SpecialistId,
                 MedicalHistory = medicalHistory,
-                MedicalHistoryId = medicalHistory.Id,
-                SpecialistId = p.SpecialistId,
                 Specialist = specialist,
-                CanEdit = p.CanEdit,
-                Status = p.Status
+                CanEdit = request.CanEdit,
+                Status = MedicalHistoryStatus.ContinuaEnTratamiento
             };
+            await _permissionRepository.AddAsync(newPermission);
+        }
 
-            permission.Consultations = p.MedicalConsultations.Select(c =>
-            {
-                var consultationSpecialist = _specialistRepository.GetById(c.SpecialistId)
-                    ?? throw new Exception($"Especialista con ID {c.SpecialistId} no encontrado.");
-
-                return new MedicalConsultation
-                {
-                    MedicalHistory = medicalHistory,
-                    MedicalHistoryId = medicalHistory.Id,
-                    SpecialistId = c.SpecialistId,
-                    Specialist = consultationSpecialist,
-                    Reason = c.Reason,
-                    ConsultationDate = c.ConsultationDate,
-                    Notes = c.Notes
-                };
-            }).ToList();
-
-            return permission;
-        }).ToList();
-
-        return medicalHistory;
+        return true;
     }
 
-    protected override void UpdateEntity(MedicalHistory entity, MedicalHistoryDto dto)
+    public async Task<bool> UpdateMedicalHistoryStatusAsync(
+        Guid medicalHistoryId,
+        Guid specialistId,
+        UpdateMedicalHistoryStatusDto request)
     {
-        var patient = _patientRepository.GetById(dto.PatientId)
-            ?? throw new Exception("Paciente no encontrado.");
+        var medicalHistory = await _medicalHistoryRepository.GetByIdAsync(medicalHistoryId);
+        if (medicalHistory == null) return false;
 
-        entity.PatientId = dto.PatientId;
-        entity.Patient = patient;
+        var specialist = await _specialistRepository.GetByIdAsync(specialistId);
+        if (specialist == null) return false;
 
-        entity.Permissions = dto.MedicalHistoryPermissions.Select(p =>
-        {
-            var specialist = _specialistRepository.GetById(p.SpecialistId)
-                ?? throw new Exception($"Especialista con ID {p.SpecialistId} no encontrado.");
+        var permission = await _permissionRepository.GetAll()
+            .FirstOrDefaultAsync(p =>
+                p.MedicalHistoryId == medicalHistoryId &&
+                p.SpecialistId == specialistId);
 
-            var permission = new MedicalHistoryPermission
-            {
-                MedicalHistory = entity,
-                MedicalHistoryId = entity.Id,
-                SpecialistId = p.SpecialistId,
-                Specialist = specialist,
-                CanEdit = p.CanEdit,
-                Status = p.Status
-            };
+        if (permission == null)
+            return false;
 
-            permission.Consultations = p.MedicalConsultations.Select(c =>
-            {
-                var consultationSpecialist = _specialistRepository.GetById(c.SpecialistId)
-                    ?? throw new Exception($"Especialista con ID {c.SpecialistId} no encontrado.");
-
-                return new MedicalConsultation
-                {
-                    MedicalHistory = entity,
-                    MedicalHistoryId = entity.Id,
-                    SpecialistId = c.SpecialistId,
-                    Specialist = consultationSpecialist,
-                    Reason = c.Reason,
-                    ConsultationDate = c.ConsultationDate,
-                    Notes = c.Notes
-                };
-            }).ToList();
-
-            return permission;
-        }).ToList();
+        permission.Status = request.Status;
+        await _permissionRepository.UpdateAsync(permission);
+        return true;
     }
 }
