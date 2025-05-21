@@ -42,7 +42,7 @@ public class MedicalConsultationsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(result.ErrorMessage);
 
-        return Ok("Consulta médica creada correctamente");
+        return Ok("Medical consultation created correctly.");
     }
 
     [HttpPut("{consultationId}")]
@@ -65,5 +65,26 @@ public class MedicalConsultationsController : ControllerBase
             return BadRequest(updateResult.ErrorMessage);
 
         return Ok("Medical consultation updated correctly.");
+    }
+
+    [HttpDelete("{consultationId}")]
+    [Authorize(Roles = "Administrator,Specialist")]
+    public async Task<IActionResult> DeleteMedicalConsultation([FromRoute] Guid consultationId)
+    {
+        if (User.IsInRole("Specialist"))
+        {
+            var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
+            var result = await _medicalConsultationService.DeleteMedicalConsultationAsync(consultationId, userId);
+            if (!result.IsSuccess)
+                return Unauthorized("You are not authorized to delete this consultation.");
+        }
+        else
+        {
+            var result = await _medicalConsultationService.DeleteMedicalConsultationAsync(consultationId);
+            if (!result.IsSuccess)
+                return BadRequest(result.ErrorMessage);
+        }
+
+        return Ok("Medical consultation deleted successfully.");
     }
 }
