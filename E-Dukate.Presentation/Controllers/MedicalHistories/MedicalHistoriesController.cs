@@ -19,7 +19,7 @@ public class MedicalHistoriesController : ControllerBase
     }
 
     [HttpGet("patient/{patientId}")]
-    [Authorize(Roles = "Administrator,Specialist")] 
+    [Authorize(Roles = "Administrator,Specialist")]
     public async Task<IActionResult> GetMedicalHistoriesByPatientId(Guid patientId)
     {
         var medicalHistory = await _medicalHistoryService.GetByPatientIdAsync(patientId);
@@ -41,6 +41,18 @@ public class MedicalHistoriesController : ControllerBase
         return Ok("Permit updated successfully");
     }
 
+    [HttpDelete("permissions/{permissionId}")]
+    [Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> DeletePermission(Guid permissionId)
+    {
+        var result = await _medicalHistoryService.DeletePermissionAsync(permissionId);
+
+        if (!result)
+            return BadRequest("The permit could not be deleted. Please verify that the permit exists.");
+
+        return Ok("Permit deleted successfully.");
+    }
+
     [HttpPut("histories/{medicalHistoryId}/specialists/{specialistId}/status")]
     [Authorize(Roles = "Administrator,Specialist")]
     public async Task<IActionResult> UpdateMedicalHistoryStatus(
@@ -52,7 +64,7 @@ public class MedicalHistoriesController : ControllerBase
         {
             var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
             if (userId != specialistId)
-                return Forbid("You are not allowed to update another specialist's status.");
+                return Unauthorized("You are not allowed to update another specialist's status.");
         }
 
         var result = await _medicalHistoryService.UpdateMedicalHistoryStatusAsync(

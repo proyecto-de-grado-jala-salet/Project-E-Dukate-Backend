@@ -120,4 +120,21 @@ public class MedicalHistoryService
         await _permissionRepository.UpdateAsync(permission);
         return true;
     }
+
+    public async Task<bool> DeletePermissionAsync(Guid permissionId)
+    {
+        var permission = await _permissionRepository.GetByIdAsync(permissionId);
+        if (permission == null)
+            return false;
+
+        try
+        {
+            await _permissionRepository.DeleteAsync(permissionId);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 }

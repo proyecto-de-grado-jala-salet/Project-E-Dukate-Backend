@@ -145,6 +145,42 @@ public class MedicalConsultationService : BaseService<MedicalConsultation, Updat
         return Result.Success();
     }
 
+    public async Task<Result> DeleteMedicalConsultationAsync(Guid consultationId, Guid? specialistId = null)
+    {
+        var consultation = await Repository.GetAll()
+            .Include(c => c.Permission)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == consultationId);
+
+        if (consultation == null)
+        {
+            return Result.Failure("The consultation does not exist.");
+        }
+        
+        if (specialistId.HasValue)
+        {
+            if (consultation.SpecialistId != specialistId)
+            {
+                return Result.Failure("The specialist is not assigned to this consultation.");
+            }
+
+            if (consultation.Permission == null || !consultation.Permission.CanEdit)
+            {
+                return Result.Failure("The specialist does not have editing permissions for this consultation.");
+            }
+        }
+
+        try
+        {
+            await Repository.DeleteAsync(consultationId);
+            return Result.Success();
+        }
+        catch (Exception)
+        {
+            return Result.Failure("Error deleting consultation.");
+        }
+    }
+
     protected override MedicalConsultation MapToEntity(UpdateMedicalConsultationDto dto)
     {
         return new MedicalConsultation
