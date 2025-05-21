@@ -112,6 +112,9 @@ public class MedicalHistoryService
 
         if (permission == null)
             return false;
+            
+        if (!permission.CanEdit)
+            return false;
 
         permission.Status = request.Status;
         await _permissionRepository.UpdateAsync(permission);

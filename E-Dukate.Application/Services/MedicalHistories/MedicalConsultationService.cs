@@ -36,13 +36,13 @@ public class MedicalConsultationService : BaseService<MedicalConsultation, Updat
         var medicalHistory = await _medicalHistoryRepository.GetByIdAsync(medicalHistoryId);
         if (medicalHistory == null)
         {
-            return Result.Failure("El historial médico no existe.");
+            return Result.Failure("The medical history does not exist.");
         }
 
         var specialist = await _specialistRepository.GetByIdAsync(specialistId);
         if (specialist == null)
         {
-            return Result.Failure("El especialista no existe.");
+            return Result.Failure("The specialist does not exist.");
         }
 
         var permission = await _permissionRepository.GetAll()
@@ -55,12 +55,12 @@ public class MedicalConsultationService : BaseService<MedicalConsultation, Updat
 
         if (permission == null)
         {
-            return Result.Failure("El permiso no existe o no coincide con el historial y especialista.");
+            return Result.Failure("The permit does not exist or does not match the history and specialist.");
         }
 
         if (!permission.CanEdit)
         {
-            return Result.Failure("El especialista no tiene permisos de edición.");
+            return Result.Failure("The specialist does not have editing permissions.");
         }
 
         var validationResult = Validator.Validate(request);
@@ -79,9 +79,9 @@ public class MedicalConsultationService : BaseService<MedicalConsultation, Updat
             Repository.Add(consultation);
             return Result.Success();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Result.Failure($"Error al crear la consulta: {ex.Message}");
+            return Result.Failure("Error creating consultation.");
         }
     }
 
@@ -94,12 +94,12 @@ public class MedicalConsultationService : BaseService<MedicalConsultation, Updat
 
         if (consultation == null)
         {
-            return Result.Failure("La consulta no existe.");
+            return Result.Failure("The consultation does not exist.");
         }
 
         if (consultation.Permission == null || !consultation.Permission.CanEdit)
         {
-            return Result.Failure("No hay permisos de edición para esta consulta.");
+            return Result.Failure("There are no editing permissions for this consultation.");
         }
 
         var validationResult = Validator.Validate(request);
@@ -114,10 +114,35 @@ public class MedicalConsultationService : BaseService<MedicalConsultation, Updat
             var result = Update(consultationId, request);
             return result;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Result.Failure($"Error al actualizar la consulta: {ex.Message}");
+            return Result.Failure("Error updating consultation.");
         }
+    }
+
+    public async Task<Result> CanSpecialistEditConsultationAsync(Guid consultationId, Guid specialistId)
+    {
+        var consultation = await Repository.GetAll()
+            .Include(c => c.Permission)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == consultationId);
+
+        if (consultation == null)
+        {
+            return Result.Failure("The consultation does not exist.");
+        }
+
+        if (consultation.SpecialistId != specialistId)
+        {
+            return Result.Failure("The specialist is not assigned to this consultation.");
+        }
+
+        if (consultation.Permission == null || !consultation.Permission.CanEdit)
+        {
+            return Result.Failure("The specialist does not have editing permissions for this consultation.");
+        }
+
+        return Result.Success();
     }
 
     protected override MedicalConsultation MapToEntity(UpdateMedicalConsultationDto dto)

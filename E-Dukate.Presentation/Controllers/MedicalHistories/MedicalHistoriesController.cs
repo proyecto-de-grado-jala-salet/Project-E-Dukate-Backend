@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using E_Dukate.Application.DTOs.MedicalHistories;
 using E_Dukate.Application.Services.MedicalHistories;
+using System.Security.Claims;
 
 namespace E_Dukate.Presentation.Controllers.MedicalHistories;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class MedicalHistoriesController : ControllerBase
 {
     private readonly MedicalHistoryService _medicalHistoryService;
@@ -16,40 +19,50 @@ public class MedicalHistoriesController : ControllerBase
     }
 
     [HttpGet("patient/{patientId}")]
+    [Authorize(Roles = "Administrator,Specialist")] 
     public async Task<IActionResult> GetMedicalHistoriesByPatientId(Guid patientId)
     {
         var medicalHistory = await _medicalHistoryService.GetByPatientIdAsync(patientId);
         if (medicalHistory == null)
-            return NotFound("No se encontró el historial médico para el paciente especificado.");
+            return NotFound("Medical History were not found for the specified patient.");
 
         return Ok(medicalHistory);
     }
 
     [HttpPost("permissions")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> UpdateEditingPermission([FromBody] PermissionRequestDto request)
     {
         var result = await _medicalHistoryService.UpdateEditingPermissionAsync(request);
 
         if (!result)
-            return BadRequest("No se pudo actualizar el permiso. Verifique que el historial médico y el especialista existan.");
+            return BadRequest("The permit could not be updated. Please verify that the medical history and specialist are present.");
 
-        return Ok("Permiso actualizado correctamente");
+        return Ok("Permit updated successfully");
     }
 
     [HttpPut("histories/{medicalHistoryId}/specialists/{specialistId}/status")]
+    [Authorize(Roles = "Administrator,Specialist")]
     public async Task<IActionResult> UpdateMedicalHistoryStatus(
         [FromRoute] Guid medicalHistoryId,
         [FromRoute] Guid specialistId,
         [FromBody] UpdateMedicalHistoryStatusDto request)
     {
+        if (User.IsInRole("Specialist"))
+        {
+            var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
+            if (userId != specialistId)
+                return Forbid("You are not allowed to update another specialist's status.");
+        }
+
         var result = await _medicalHistoryService.UpdateMedicalHistoryStatusAsync(
             medicalHistoryId,
             specialistId,
             request);
 
         if (!result)
-            return BadRequest("No se pudo actualizar el estado. Verifique que el historial médico y el especialista existan y tengan permisos.");
+            return BadRequest("The status could not be updated. Please verify that the medical history and specialist exist and have permissions.");
 
-        return Ok("Estado del historial médico actualizado correctamente");
+        return Ok("Medical history status updated successfully.");
     }
 }
