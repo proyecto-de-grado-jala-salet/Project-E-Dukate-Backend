@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using E_Dukate.Application.DTOs.MedicalHistories;
 using E_Dukate.Application.Services.MedicalHistories;
 using System.Security.Claims;
+using E_Dukate.Application.DTOs.Common;
 
 namespace E_Dukate.Presentation.Controllers.MedicalHistories;
 
@@ -71,5 +72,31 @@ public class MedicalConsultationsController : ControllerBase
             return Unauthorized("You are not authorized to delete this consultation.");
 
         return Ok("Medical consultation deleted successfully.");
+    }
+
+    [HttpGet("histories/{medicalHistoryId}/specialists/{specialistId}/permissions/{permissionId}/consultations")]
+    [Authorize(Roles = "Administrator,Specialist")]
+    public async Task<IActionResult> GetSpecialistConsultations(
+        [FromRoute] Guid medicalHistoryId,
+        [FromRoute] Guid specialistId,
+        [FromRoute] Guid permissionId,
+        [FromQuery] PaginationParams pagination)
+    {
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+        
+        if (userRole == "Specialist" && userId != specialistId)
+            return Unauthorized("You can only view your own consultations.");
+
+        var result = await _medicalConsultationService.GetSpecialistConsultationsAsync(
+            medicalHistoryId,
+            specialistId,
+            permissionId,
+            pagination);
+
+        if (!result.IsSuccess)
+            return BadRequest(result.ErrorMessage);
+
+        return Ok(result.Value);
     }
 }

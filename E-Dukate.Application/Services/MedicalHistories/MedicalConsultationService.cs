@@ -5,6 +5,7 @@ using E_Dukate.Domain.Interfaces;
 using E_Dukate.Application.DTOs.MedicalHistories;
 using FluentValidation;
 using E_Dukate.Domain.Primitives;
+using E_Dukate.Application.DTOs.Common;
 
 namespace E_Dukate.Application.Services.MedicalHistories;
 
@@ -176,6 +177,61 @@ public class MedicalConsultationService : BaseService<MedicalConsultation, Updat
         {
             return Result.Failure("Error deleting consultation.");
         }
+    }
+
+    public async Task<ValueResult<object>> GetSpecialistConsultationsAsync(
+        Guid medicalHistoryId,
+        Guid specialistId,
+        Guid permissionId,
+        PaginationParams pagination)
+    {
+        var medicalHistory = await _medicalHistoryRepository.GetByIdAsync(medicalHistoryId);
+        if (medicalHistory == null)
+        {
+            return ValueResult<object>.Failure("The medical history does not exist.");
+        }
+
+        var specialist = await _specialistRepository.GetByIdAsync(specialistId);
+        if (specialist == null)
+        {
+            return ValueResult<object>.Failure("The specialist does not exist.");
+        }
+
+        var permission = await _permissionRepository.GetAll()
+            .Include(p => p.Consultations)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p =>
+                p.Id == permissionId &&
+                p.MedicalHistoryId == medicalHistoryId &&
+                p.SpecialistId == specialistId);
+
+        if (permission == null)
+        {
+            return ValueResult<object>.Failure("The permit does not exist or does not match the history and specialist.");
+        }
+        
+        var query = Repository.GetAll().Where(c => c.PermissionId == permissionId);
+        var (items, totalCount) = await GetPagedAsync(pagination);
+
+        var consultations = items.Select(c => new
+        {
+            c.Id,
+            c.Reason,
+            c.ConsultationDate,
+            c.Notes,
+            c.SpecialistId
+        }).ToList();
+
+        var result = new
+        {
+            Items = consultations,
+            TotalCount = totalCount,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize)
+        };
+
+        return ValueResult<object>.Success(result);
     }
 
     protected override MedicalConsultation MapToEntity(UpdateMedicalConsultationDto dto)
