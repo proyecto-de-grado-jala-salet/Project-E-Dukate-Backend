@@ -19,19 +19,16 @@ public class MedicalConsultationsController : ControllerBase
     }
 
     [HttpPost("histories/{medicalHistoryId}/specialists/{specialistId}/permissions/{permissionId}/consultation")]
-    [Authorize(Roles = "Administrator,Specialist")]
+    [Authorize(Roles = "Specialist")]
     public async Task<IActionResult> CreateMedicalConsultation(
         [FromRoute] Guid medicalHistoryId,
         [FromRoute] Guid specialistId,
         [FromRoute] Guid permissionId,
         [FromBody] UpdateMedicalConsultationDto request)
     {
-        if (User.IsInRole("Specialist"))
-        {
-            var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
-            if (userId != specialistId)
-                return Unauthorized("You do not have permission to create consultation for another specialist.");
-        }
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
+        if (userId != specialistId)
+            return Unauthorized("You do not have permission to create a consultation for another specialist.");
 
         var result = await _medicalConsultationService.CreateMedicalConsultationAsync(
             medicalHistoryId,
@@ -46,18 +43,15 @@ public class MedicalConsultationsController : ControllerBase
     }
 
     [HttpPut("{consultationId}")]
-    [Authorize(Roles = "Administrator,Specialist")]
+    [Authorize(Roles = "Specialist")]
     public async Task<IActionResult> UpdateMedicalConsultation(
         [FromRoute] Guid consultationId,
         [FromBody] UpdateMedicalConsultationDto request)
     {
-        if (User.IsInRole("Specialist"))
-        {
-            var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
-            var result = await _medicalConsultationService.CanSpecialistEditConsultationAsync(consultationId, userId);
-            if (!result.IsSuccess)
-                return Unauthorized("You are not authorized to edit this consultation.");
-        }
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
+        var result = await _medicalConsultationService.CanSpecialistEditConsultationAsync(consultationId, userId);
+        if (!result.IsSuccess)
+            return Unauthorized("You are not authorized to edit this consultation.");
 
         var updateResult = await _medicalConsultationService.UpdateMedicalConsultationAsync(consultationId, request);
 
@@ -68,22 +62,13 @@ public class MedicalConsultationsController : ControllerBase
     }
 
     [HttpDelete("{consultationId}")]
-    [Authorize(Roles = "Administrator,Specialist")]
+    [Authorize(Roles = "Specialist")]
     public async Task<IActionResult> DeleteMedicalConsultation([FromRoute] Guid consultationId)
     {
-        if (User.IsInRole("Specialist"))
-        {
-            var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
-            var result = await _medicalConsultationService.DeleteMedicalConsultationAsync(consultationId, userId);
-            if (!result.IsSuccess)
-                return Unauthorized("You are not authorized to delete this consultation.");
-        }
-        else
-        {
-            var result = await _medicalConsultationService.DeleteMedicalConsultationAsync(consultationId);
-            if (!result.IsSuccess)
-                return BadRequest(result.ErrorMessage);
-        }
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
+        var result = await _medicalConsultationService.DeleteMedicalConsultationAsync(consultationId, userId);
+        if (!result.IsSuccess)
+            return Unauthorized("You are not authorized to delete this consultation.");
 
         return Ok("Medical consultation deleted successfully.");
     }

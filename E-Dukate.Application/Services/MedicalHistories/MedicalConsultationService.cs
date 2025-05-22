@@ -145,7 +145,7 @@ public class MedicalConsultationService : BaseService<MedicalConsultation, Updat
         return Result.Success();
     }
 
-    public async Task<Result> DeleteMedicalConsultationAsync(Guid consultationId, Guid? specialistId = null)
+    public async Task<Result> DeleteMedicalConsultationAsync(Guid consultationId, Guid specialistId)
     {
         var consultation = await Repository.GetAll()
             .Include(c => c.Permission)
@@ -156,18 +156,15 @@ public class MedicalConsultationService : BaseService<MedicalConsultation, Updat
         {
             return Result.Failure("The consultation does not exist.");
         }
-        
-        if (specialistId.HasValue)
-        {
-            if (consultation.SpecialistId != specialistId)
-            {
-                return Result.Failure("The specialist is not assigned to this consultation.");
-            }
 
-            if (consultation.Permission == null || !consultation.Permission.CanEdit)
-            {
-                return Result.Failure("The specialist does not have editing permissions for this consultation.");
-            }
+        if (consultation.SpecialistId != specialistId)
+        {
+            return Result.Failure("The specialist is not assigned to this consultation.");
+        }
+
+        if (consultation.Permission == null || !consultation.Permission.CanEdit)
+        {
+            return Result.Failure("The specialist does not have editing permissions for this consultation.");
         }
 
         try
