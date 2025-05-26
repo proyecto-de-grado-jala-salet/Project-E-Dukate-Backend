@@ -82,12 +82,6 @@ public class MedicalConsultationsController : ControllerBase
         [FromRoute] Guid permissionId,
         [FromQuery] PaginationParams pagination)
     {
-        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
-        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-        
-        if (userRole == "Specialist" && userId != specialistId)
-            return Unauthorized("You can only view your own consultations.");
-
         var result = await _medicalConsultationService.GetSpecialistConsultationsAsync(
             medicalHistoryId,
             specialistId,
