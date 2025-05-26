@@ -81,6 +81,82 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.ToTable("UserAuths", (string)null);
                 });
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalConsultation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ConsultationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SpecialistId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PermissionId");
+
+                    b.HasIndex("SpecialistId");
+
+                    b.ToTable("MedicalConsultations", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId")
+                        .IsUnique();
+
+                    b.ToTable("MedicalHistories", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistoryPermission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("CanEdit")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("MedicalHistoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SpecialistId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MedicalHistoryId");
+
+                    b.HasIndex("SpecialistId");
+
+                    b.ToTable("MedicalHistoryPermissions", (string)null);
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.Schedule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -198,6 +274,9 @@ namespace E_Dukate.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid>("MedicalHistoryId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("MobileNumber")
                         .IsRequired()
                         .HasColumnType("text");
@@ -272,6 +351,55 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.ToTable("Specialists", (string)null);
                 });
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalConsultation", b =>
+                {
+                    b.HasOne("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistoryPermission", "Permission")
+                        .WithMany("Consultations")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("E_Dukate.Domain.Entities.Users.Specialist", "Specialist")
+                        .WithMany()
+                        .HasForeignKey("SpecialistId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Specialist");
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistory", b =>
+                {
+                    b.HasOne("E_Dukate.Domain.Entities.Users.Patient", "Patient")
+                        .WithOne("MedicalHistory")
+                        .HasForeignKey("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistory", "PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistoryPermission", b =>
+                {
+                    b.HasOne("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistory", "MedicalHistory")
+                        .WithMany("Permissions")
+                        .HasForeignKey("MedicalHistoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("E_Dukate.Domain.Entities.Users.Specialist", "Specialist")
+                        .WithMany()
+                        .HasForeignKey("SpecialistId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MedicalHistory");
+
+                    b.Navigation("Specialist");
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.Schedule", b =>
                 {
                     b.HasOne("E_Dukate.Domain.Entities.Users.Specialist", "Specialist")
@@ -292,6 +420,21 @@ namespace E_Dukate.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Specialty");
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistory", b =>
+                {
+                    b.Navigation("Permissions");
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistoryPermission", b =>
+                {
+                    b.Navigation("Consultations");
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Users.Patient", b =>
+                {
+                    b.Navigation("MedicalHistory");
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.Users.Specialist", b =>

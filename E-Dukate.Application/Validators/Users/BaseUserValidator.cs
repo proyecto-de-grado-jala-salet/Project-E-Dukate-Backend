@@ -31,9 +31,6 @@ public abstract class BaseUserValidator<T> : AbstractValidator<T> where T : Base
             .Matches("^[0-9]{8}$").When(x => !string.IsNullOrEmpty(x.PhoneNumber))
             .WithMessage("Telephone Number must be 8 digits.");
 
-        RuleFor(x => x.Age)
-            .InclusiveBetween(18, 100).WithMessage("Age must be between 18 and 100.");
-
         RuleFor(x => x.Gender)
             .NotEmpty().WithMessage("Gender is required.")
             .Must(g => g == "M" || g == "F").WithMessage("Gender must be 'M' or 'F'.");

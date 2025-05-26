@@ -25,6 +25,10 @@ using E_Dukate.Application.Validators.Auth;
 using E_Dukate.Application.DTOs.Auth;
 using E_Dukate.Domain.Entities.Auth;
 using E_Dukate.Application.Interfaces.Auth;
+using E_Dukate.Domain.Entities.MedicalHistories;
+using E_Dukate.Application.Services.MedicalHistories;
+using E_Dukate.Application.DTOs.MedicalHistories;
+using E_Dukate.Application.Validators.MedicalHistories;
 
 namespace E_Dukate.Presentation.Configuration;
 
@@ -49,6 +53,9 @@ public static class DependencyInjection
         services.AddScoped<IGenericRepository<Schedule>, GenericRepository<Schedule>>();
         services.AddScoped<IGenericRepository<LoginLog>, GenericRepository<LoginLog>>();
         services.AddScoped<IGenericRepository<UserAuth>, GenericRepository<UserAuth>>();
+        services.AddScoped<IGenericRepository<MedicalHistory>, GenericRepository<MedicalHistory>>();
+        services.AddScoped<IGenericRepository<MedicalHistoryPermission>, GenericRepository<MedicalHistoryPermission>>();
+        services.AddScoped<IGenericRepository<MedicalConsultation>, GenericRepository<MedicalConsultation>>();
         return services;
     }
 
@@ -64,6 +71,8 @@ public static class DependencyInjection
         services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<JwtTokenGenerator>();
         services.AddScoped<LoginLogger>();
+        services.AddScoped<MedicalHistoryService>();
+        services.AddScoped<MedicalConsultationService>();
         services.AddScoped<StartAppointmentHandler>();
         services.AddScoped<AskNameHandler>();
         services.AddScoped<AskLastNamePaternalHandler>();
@@ -86,6 +95,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<SpecialtyDto>, SpecialtyValidator>();
         services.AddScoped<IValidator<ScheduleDto>, ScheduleValidator>();
         services.AddScoped<IValidator<LoginDto>, LoginValidator>();
+        services.AddScoped<IValidator<UpdateMedicalConsultationDto>, UpdateMedicalConsultationDtoValidator>();
         services.AddScoped<UserAuthValidator>();
         return services;
     }
