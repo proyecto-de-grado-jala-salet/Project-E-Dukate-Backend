@@ -29,6 +29,14 @@ using E_Dukate.Domain.Entities.MedicalHistories;
 using E_Dukate.Application.Services.MedicalHistories;
 using E_Dukate.Application.DTOs.MedicalHistories;
 using E_Dukate.Application.Validators.MedicalHistories;
+using E_Dukate.Domain.Entities.Appointments;
+using E_Dukate.Domain.Entities.Payments;
+using E_Dukate.Application.Services.Appointments;
+using E_Dukate.Application.Services.Payments;
+using E_Dukate.Application.DTOs.Appointments;
+using E_Dukate.Application.DTOs.Payments;
+using E_Dukate.Application.Validators.Appointments;
+using E_Dukate.Application.Validators.Payments;
 
 namespace E_Dukate.Presentation.Configuration;
 
@@ -56,6 +64,8 @@ public static class DependencyInjection
         services.AddScoped<IGenericRepository<MedicalHistory>, GenericRepository<MedicalHistory>>();
         services.AddScoped<IGenericRepository<MedicalHistoryPermission>, GenericRepository<MedicalHistoryPermission>>();
         services.AddScoped<IGenericRepository<MedicalConsultation>, GenericRepository<MedicalConsultation>>();
+        services.AddScoped<IGenericRepository<Appointment>, GenericRepository<Appointment>>();
+        services.AddScoped<IGenericRepository<Payment>, GenericRepository<Payment>>();
         return services;
     }
 
@@ -83,6 +93,8 @@ public static class DependencyInjection
         services.AddScoped<ShowSpecialtiesHandler>();
         services.AddScoped<ShowSpecialistsHandler>();
         services.AddScoped<ShowSchedulesHandler>();
+        services.AddScoped<AppointmentService>();
+        services.AddScoped<PaymentService>();
         services.AddSingleton<IConversationStateManager, ConversationStateManager>();
         return services;
     }
@@ -97,6 +109,8 @@ public static class DependencyInjection
         services.AddScoped<IValidator<LoginDto>, LoginValidator>();
         services.AddScoped<IValidator<UpdateMedicalConsultationDto>, UpdateMedicalConsultationDtoValidator>();
         services.AddScoped<UserAuthValidator>();
+        services.AddScoped<IValidator<AppointmentDto>, AppointmentValidator>();
+        services.AddScoped<IValidator<PaymentDto>, PaymentValidator>();
         return services;
     }
 
