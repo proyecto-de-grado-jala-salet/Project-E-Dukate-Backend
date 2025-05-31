@@ -75,7 +75,7 @@ public class PatientService : BaseService<Patient, PatientDto>
         entity.DateOfBirth = dto.DateOfBirth;
         entity.Address = dto.Address;
     }
-    
+
     public async Task<(IEnumerable<Patient> Items, int TotalCount)> SearchPatientsAsync(string searchTerm, PaginationParams pagination)
     {
         var query = Repository.GetAll();
@@ -83,7 +83,14 @@ public class PatientService : BaseService<Patient, PatientDto>
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             searchTerm = searchTerm.ToLower();
+            var searchTerms = searchTerm.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
             query = query.Where(p =>
+                (searchTerms.Length > 1
+                    ? searchTerms.Any(term => p.Names.ToLower().Contains(term)) &&
+                      (searchTerms.Any(term => p.LastNamePaternal.ToLower().Contains(term)) ||
+                       (p.LastNameMaternal != null && searchTerms.Any(term => p.LastNameMaternal.ToLower().Contains(term))))
+                    : false) ||
                 p.Names.ToLower().Contains(searchTerm) ||
                 p.LastNamePaternal.ToLower().Contains(searchTerm) ||
                 (p.LastNameMaternal != null && p.LastNameMaternal.ToLower().Contains(searchTerm)) ||
