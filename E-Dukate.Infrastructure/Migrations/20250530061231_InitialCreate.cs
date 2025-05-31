@@ -124,6 +124,7 @@ namespace E_Dukate.Infrastructure.Migrations
                     SpecialtyId = table.Column<Guid>(type: "uuid", nullable: false),
                     YearsOfExperience = table.Column<int>(type: "integer", nullable: false),
                     SpecialistCode = table.Column<string>(type: "text", nullable: false),
+                    ConsultationDuration = table.Column<int>(type: "integer", nullable: false),
                     Names = table.Column<string>(type: "text", nullable: false),
                     LastNamePaternal = table.Column<string>(type: "text", nullable: false),
                     LastNameMaternal = table.Column<string>(type: "text", nullable: true),
@@ -144,6 +145,43 @@ namespace E_Dukate.Infrastructure.Migrations
                         principalTable: "Specialties",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Appointments",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    PatientId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SpecialistId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SpecialtyId = table.Column<Guid>(type: "uuid", nullable: false),
+                    StartTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    EndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: true),
+                    SessionCount = table.Column<int>(type: "integer", nullable: false),
+                    PaymentId = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Appointments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Appointments_Patients_PatientId",
+                        column: x => x.PatientId,
+                        principalTable: "Patients",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Appointments_Specialists_SpecialistId",
+                        column: x => x.SpecialistId,
+                        principalTable: "Specialists",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Appointments_Specialties_SpecialtyId",
+                        column: x => x.SpecialtyId,
+                        principalTable: "Specialties",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -180,7 +218,6 @@ namespace E_Dukate.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     SpecialistId = table.Column<Guid>(type: "uuid", nullable: false),
                     DayOfWeek = table.Column<int>(type: "integer", nullable: false),
-                    TimeSlots = table.Column<string>(type: "text", nullable: false),
                     Attends = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
@@ -192,6 +229,48 @@ namespace E_Dukate.Infrastructure.Migrations
                         principalTable: "Specialists",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Payments",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    AppointmentId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PatientId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SpecialistId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SessionCost = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    SessionCount = table.Column<int>(type: "integer", nullable: false),
+                    TotalAmount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    AmountPaid = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    PendingAmount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    SpecialistAmount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    InstitutionAmount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    FirstPaymentDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    LastPaymentDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Payments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Payments_Appointments_AppointmentId",
+                        column: x => x.AppointmentId,
+                        principalTable: "Appointments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Payments_Patients_PatientId",
+                        column: x => x.PatientId,
+                        principalTable: "Patients",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Payments_Specialists_SpecialistId",
+                        column: x => x.SpecialistId,
+                        principalTable: "Specialists",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -222,6 +301,41 @@ namespace E_Dukate.Infrastructure.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "TimeSlots",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ScheduleId = table.Column<Guid>(type: "uuid", nullable: false),
+                    StartTime = table.Column<TimeOnly>(type: "time without time zone", nullable: false),
+                    EndTime = table.Column<TimeOnly>(type: "time without time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TimeSlots", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TimeSlots_Schedules_ScheduleId",
+                        column: x => x.ScheduleId,
+                        principalTable: "Schedules",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Appointments_PatientId",
+                table: "Appointments",
+                column: "PatientId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Appointments_SpecialistId",
+                table: "Appointments",
+                column: "SpecialistId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Appointments_SpecialtyId",
+                table: "Appointments",
+                column: "SpecialtyId");
+
             migrationBuilder.CreateIndex(
                 name: "IX_MedicalConsultations_PermissionId",
                 table: "MedicalConsultations",
@@ -249,6 +363,22 @@ namespace E_Dukate.Infrastructure.Migrations
                 column: "SpecialistId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Payments_AppointmentId",
+                table: "Payments",
+                column: "AppointmentId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Payments_PatientId",
+                table: "Payments",
+                column: "PatientId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Payments_SpecialistId",
+                table: "Payments",
+                column: "SpecialistId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Schedules_SpecialistId",
                 table: "Schedules",
                 column: "SpecialistId");
@@ -257,6 +387,11 @@ namespace E_Dukate.Infrastructure.Migrations
                 name: "IX_Specialists_SpecialtyId",
                 table: "Specialists",
                 column: "SpecialtyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TimeSlots_ScheduleId",
+                table: "TimeSlots",
+                column: "ScheduleId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserAuths_Email",
@@ -278,13 +413,22 @@ namespace E_Dukate.Infrastructure.Migrations
                 name: "MedicalConsultations");
 
             migrationBuilder.DropTable(
-                name: "Schedules");
+                name: "Payments");
+
+            migrationBuilder.DropTable(
+                name: "TimeSlots");
 
             migrationBuilder.DropTable(
                 name: "UserAuths");
 
             migrationBuilder.DropTable(
                 name: "MedicalHistoryPermissions");
+
+            migrationBuilder.DropTable(
+                name: "Appointments");
+
+            migrationBuilder.DropTable(
+                name: "Schedules");
 
             migrationBuilder.DropTable(
                 name: "MedicalHistories");

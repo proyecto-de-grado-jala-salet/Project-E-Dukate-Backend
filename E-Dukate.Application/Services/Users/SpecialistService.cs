@@ -87,12 +87,14 @@ public class SpecialistService : BaseService<Specialist, SpecialistDto>
         Repository.GetAll()
             .Include(s => s.Specialty)
             .Include(s => s.Schedules)
+            .ThenInclude(s => s.TimeSlots)
             .FirstOrDefault(s => s.Id == id);
 
     public IEnumerable<Specialist> GetAllSpecialists() =>
         Repository.GetAll()
             .Include(s => s.Specialty)
             .Include(s => s.Schedules)
+            .ThenInclude(s => s.TimeSlots)
             .ToList();
 
     protected override Specialist MapToEntity(SpecialistDto dto)

@@ -86,10 +86,12 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
             specialist.SpecialistCode,
             Schedules = specialist.Schedules.Select(s => new
             {
+                s.Id,
                 DayOfWeek = s.DayOfWeek.ToString(),
                 Attends = s.Attends,
                 TimeSlots = s.TimeSlots.Select(ts => new
                 {
+                    ts.Id,
                     StartTime = ts.StartTime.ToString("HH:mm"),
                     EndTime = ts.EndTime.ToString("HH:mm")
                 }).ToList()
@@ -130,10 +132,12 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
             specialist.SpecialistCode,
             Schedules = specialist.Schedules.Select(s => new
             {
+                s.Id,
                 DayOfWeek = s.DayOfWeek.ToString(),
                 Attends = s.Attends,
                 TimeSlots = s.TimeSlots.Select(ts => new
                 {
+                    ts.Id,
                     StartTime = ts.StartTime.ToString("HH:mm"),
                     EndTime = ts.EndTime.ToString("HH:mm")
                 }).ToList()

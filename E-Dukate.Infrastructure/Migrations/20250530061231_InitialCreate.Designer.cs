@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace E_Dukate.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250520004138_InitialCreate")]
+    [Migration("20250530061231_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -24,6 +24,47 @@ namespace E_Dukate.Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Appointments.Appointment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PaymentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SessionCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SpecialistId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SpecialtyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("SpecialistId");
+
+                    b.HasIndex("SpecialtyId");
+
+                    b.ToTable("Appointments", (string)null);
+                });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.Auth.LoginLog", b =>
                 {
@@ -160,6 +201,63 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.ToTable("MedicalHistoryPermissions", (string)null);
                 });
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Payments.Payment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AmountPaid")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("AppointmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("FirstPaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("InstitutionAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("LastPaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("PendingAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SessionCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("SessionCount")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("SpecialistAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("SpecialistId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppointmentId")
+                        .IsUnique();
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("SpecialistId");
+
+                    b.ToTable("Payments", (string)null);
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.Schedule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -175,15 +273,33 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.Property<Guid>("SpecialistId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("TimeSlots")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.HasIndex("SpecialistId");
 
                     b.ToTable("Schedules", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.TimeSlot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<Guid>("ScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScheduleId");
+
+                    b.ToTable("TimeSlots", (string)null);
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.Specialties.Specialty", b =>
@@ -309,6 +425,9 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.Property<int>("Age")
                         .HasColumnType("integer");
 
+                    b.Property<int>("ConsultationDuration")
+                        .HasColumnType("integer");
+
                     b.Property<DateOnly>("DateOfBirth")
                         .HasColumnType("date");
 
@@ -352,6 +471,33 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.HasIndex("SpecialtyId");
 
                     b.ToTable("Specialists", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Appointments.Appointment", b =>
+                {
+                    b.HasOne("E_Dukate.Domain.Entities.Users.Patient", "Patient")
+                        .WithMany("Appointments")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("E_Dukate.Domain.Entities.Users.Specialist", "Specialist")
+                        .WithMany("Appointments")
+                        .HasForeignKey("SpecialistId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("E_Dukate.Domain.Entities.Specialties.Specialty", "Specialty")
+                        .WithMany()
+                        .HasForeignKey("SpecialtyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Patient");
+
+                    b.Navigation("Specialist");
+
+                    b.Navigation("Specialty");
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalConsultation", b =>
@@ -403,6 +549,33 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.Navigation("Specialist");
                 });
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Payments.Payment", b =>
+                {
+                    b.HasOne("E_Dukate.Domain.Entities.Appointments.Appointment", "Appointment")
+                        .WithOne("Payment")
+                        .HasForeignKey("E_Dukate.Domain.Entities.Payments.Payment", "AppointmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("E_Dukate.Domain.Entities.Users.Patient", "Patient")
+                        .WithMany("Payments")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("E_Dukate.Domain.Entities.Users.Specialist", "Specialist")
+                        .WithMany("Payments")
+                        .HasForeignKey("SpecialistId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Appointment");
+
+                    b.Navigation("Patient");
+
+                    b.Navigation("Specialist");
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.Schedule", b =>
                 {
                     b.HasOne("E_Dukate.Domain.Entities.Users.Specialist", "Specialist")
@@ -412,6 +585,17 @@ namespace E_Dukate.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Specialist");
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.TimeSlot", b =>
+                {
+                    b.HasOne("E_Dukate.Domain.Entities.Schedules.Schedule", "Schedule")
+                        .WithMany("TimeSlots")
+                        .HasForeignKey("ScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Schedule");
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.Users.Specialist", b =>
@@ -425,6 +609,11 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.Navigation("Specialty");
                 });
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Appointments.Appointment", b =>
+                {
+                    b.Navigation("Payment");
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistory", b =>
                 {
                     b.Navigation("Permissions");
@@ -435,13 +624,26 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.Navigation("Consultations");
                 });
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.Schedule", b =>
+                {
+                    b.Navigation("TimeSlots");
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.Users.Patient", b =>
                 {
+                    b.Navigation("Appointments");
+
                     b.Navigation("MedicalHistory");
+
+                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.Users.Specialist", b =>
                 {
+                    b.Navigation("Appointments");
+
+                    b.Navigation("Payments");
+
                     b.Navigation("Schedules");
                 });
 #pragma warning restore 612, 618

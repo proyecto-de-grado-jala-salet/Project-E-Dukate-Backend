@@ -6,6 +6,7 @@ using E_Dukate.Application.DTOs.Common;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
+using E_Dukate.Domain.Entities.Schedules;
 
 namespace E_Dukate.Presentation.Controllers.Appointments;
 
@@ -36,7 +37,11 @@ public class AppointmentsController : BaseController<Appointment, AppointmentDto
         if (!result.IsSuccess)
             return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
 
-        return CreatedAtAction(nameof(GetById), new { id = Guid.NewGuid() }, dto);
+        // Obtener la cita recién creada para devolverla en la respuesta
+        var appointment = _appointmentService.ListAll(dto.SpecialistId)
+            .OrderByDescending(a => a.StartTime ?? DateTime.MinValue)
+            .FirstOrDefault();
+        return CreatedAtAction(nameof(GetById), new { id = appointment.Id }, MapToResponse(appointment));
     }
 
     [HttpPut("{id}")]
@@ -106,7 +111,36 @@ public class AppointmentsController : BaseController<Appointment, AppointmentDto
                 return Unauthorized("No tienes permiso para ver esta cita.");
         }
 
-        var response = new
+        return Ok(MapToResponse(appointment));
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "Administrator,Specialist")]
+    public override async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
+    {
+        Guid? specialistId = null;
+        if (User.IsInRole("Specialist"))
+        {
+            specialistId = Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? string.Empty);
+        }
+
+        var (items, totalCount) = await _appointmentService.GetPagedAsync(pagination, specialistId);
+        var response = items.Select(MapToResponse);
+
+        return Ok(new
+        {
+            Items = response,
+            TotalCount = totalCount,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize)
+        });
+    }
+
+    // Método auxiliar para mapear Appointment a la respuesta
+    private object MapToResponse(Appointment appointment)
+    {
+        return new
         {
             appointment.Id,
             Patient = new
@@ -147,70 +181,5 @@ public class AppointmentsController : BaseController<Appointment, AppointmentDto
                 appointment.Payment.Status
             } : null
         };
-
-        return Ok(response);
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Administrator,Specialist")]
-    public override async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
-    {
-        Guid? specialistId = null;
-        if (User.IsInRole("Specialist"))
-        {
-            specialistId = Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? string.Empty);
-        }
-
-        var (items, totalCount) = await _appointmentService.GetPagedAsync(pagination, specialistId);
-        var response = items.Select(appointment => new
-        {
-            appointment.Id,
-            Patient = new
-            {
-                appointment.Patient.Id,
-                appointment.Patient.Names,
-                appointment.Patient.LastNamePaternal,
-                appointment.Patient.LastNameMaternal
-            },
-            Specialist = new
-            {
-                appointment.Specialist.Id,
-                appointment.Specialist.Names,
-                appointment.Specialist.LastNamePaternal,
-                appointment.Specialist.LastNameMaternal
-            },
-            Specialty = new
-            {
-                appointment.Specialty.Id,
-                appointment.Specialty.TypeOfSpecialty
-            },
-            appointment.StartTime,
-            appointment.EndTime,
-            appointment.SessionCount,
-            appointment.Status,
-            Payment = appointment.Payment != null ? new
-            {
-                appointment.Payment.Id,
-                appointment.Payment.SessionCost,
-                appointment.Payment.SessionCount,
-                appointment.Payment.TotalAmount,
-                appointment.Payment.AmountPaid,
-                appointment.Payment.PendingAmount,
-                appointment.Payment.SpecialistAmount,
-                appointment.Payment.InstitutionAmount,
-                appointment.Payment.FirstPaymentDate,
-                appointment.Payment.LastPaymentDate,
-                appointment.Payment.Status
-            } : null
-        });
-
-        return Ok(new
-        {
-            Items = response,
-            TotalCount = totalCount,
-            PageNumber = pagination.PageNumber,
-            PageSize = pagination.PageSize,
-            TotalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize)
-        });
     }
 }
