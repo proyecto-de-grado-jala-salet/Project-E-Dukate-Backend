@@ -3,6 +3,7 @@ using E_Dukate.Application.DTOs.Users;
 using E_Dukate.Domain.Entities.Users;
 using Microsoft.EntityFrameworkCore;
 using E_Dukate.Application.DTOs.Common;
+using FuzzySharp; // Importar FuzzySharp
 
 namespace E_Dukate.Application.Services.Users;
 
@@ -74,17 +75,27 @@ public class UserService
             return await GetAllUsersAsync(pagination);
         }
         searchTerm = searchTerm.ToLower();
+        
+        var roles = new[]
+        {
+            new { Spanish = "especialista", English = "specialist" },
+            new { Spanish = "administrador", English = "administrator" }
+        };
+
+        string? matchedRole = null;
+        int similarityThreshold = 50;
+        foreach (var role in roles)
+        {
+            int spanishSimilarity = Fuzz.Ratio(searchTerm, role.Spanish);
+            int englishSimilarity = Fuzz.Ratio(searchTerm, role.English);
+            if (spanishSimilarity >= similarityThreshold || englishSimilarity >= similarityThreshold)
+            {
+                matchedRole = role.English;
+                break;
+            }
+        }
 
         var admins = _adminRepository.GetAll()
-            .Where(a =>
-                a.Names.ToLower().Contains(searchTerm) ||
-                a.LastNamePaternal.ToLower().Contains(searchTerm) ||
-                (a.LastNameMaternal != null && a.LastNameMaternal.ToLower().Contains(searchTerm)) ||
-                a.MobileNumber.Contains(searchTerm) ||
-                a.IdentityCard.ToString().Contains(searchTerm) ||
-                a.Age.ToString().Contains(searchTerm) ||
-                a.Gender.ToLower().Contains(searchTerm)
-            )
             .Select(a => new UserDto
             {
                 Id = a.Id,
@@ -93,20 +104,16 @@ public class UserService
                 LastNameMaternal = a.LastNameMaternal ?? string.Empty,
                 MobileNumber = a.MobileNumber,
                 Role = "Administrator"
-            });
+            })
+            .Where(a =>
+                a.Names.ToLower().Contains(searchTerm) ||
+                a.LastNamePaternal.ToLower().Contains(searchTerm) ||
+                (a.LastNameMaternal != null && a.LastNameMaternal.ToLower().Contains(searchTerm)) ||
+                a.MobileNumber.Contains(searchTerm) ||
+                (matchedRole == "administrator" && a.Role.ToLower() == "administrator")
+            );
         
         var specialists = _specialistRepository.GetAll()
-            .Where(s =>
-                s.Names.ToLower().Contains(searchTerm) ||
-                s.LastNamePaternal.ToLower().Contains(searchTerm) ||
-                (s.LastNameMaternal != null && s.LastNameMaternal.ToLower().Contains(searchTerm)) ||
-                s.MobileNumber.Contains(searchTerm) ||
-                s.IdentityCard.ToString().Contains(searchTerm) ||
-                s.Age.ToString().Contains(searchTerm) ||
-                s.Gender.ToLower().Contains(searchTerm) ||
-                s.Specialty.TypeOfSpecialty.ToLower().Contains(searchTerm) ||
-                s.SpecialistCode.ToLower().Contains(searchTerm)
-            )
             .Select(s => new UserDto
             {
                 Id = s.Id,
@@ -115,8 +122,15 @@ public class UserService
                 LastNameMaternal = s.LastNameMaternal ?? string.Empty,
                 MobileNumber = s.MobileNumber,
                 Role = "Specialist"
-            });
-        
+            })
+            .Where(s =>
+                s.Names.ToLower().Contains(searchTerm) ||
+                s.LastNamePaternal.ToLower().Contains(searchTerm) ||
+                (s.LastNameMaternal != null && s.LastNameMaternal.ToLower().Contains(searchTerm)) ||
+                s.MobileNumber.Contains(searchTerm) ||
+                (matchedRole == "specialist" && s.Role.ToLower() == "specialist")
+            );
+
         var allUsersQuery = admins.Concat(specialists);
         
         var totalCount = await allUsersQuery.CountAsync();
