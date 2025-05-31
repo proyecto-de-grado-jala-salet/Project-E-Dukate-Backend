@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using E_Dukate.Application.Services.Users;
 using E_Dukate.Application.DTOs.Common;
-using E_Dukate.Application.DTOs.Users;
 
 namespace E_Dukate.Presentation.Controllers.Users;
 
@@ -42,5 +41,24 @@ public class UsersController : ControllerBase
         {
             return BadRequest(new { Error = ex.Message });
         }
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string searchTerm, [FromQuery] PaginationParams pagination)
+    {
+        var (items, totalCount) = await _userService.SearchUsersAsync(searchTerm, pagination);
+        if (!items.Any())
+        {
+            return Ok(new { Message = "No se encontraron resultados de lo buscado" });
+        }
+
+        return Ok(new
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize)
+        });
     }
 }

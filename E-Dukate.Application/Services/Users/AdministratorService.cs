@@ -5,6 +5,8 @@ using E_Dukate.Domain.Entities.Users;
 using E_Dukate.Domain.Entities.Auth;
 using E_Dukate.Application.Services.Auth;
 using E_Dukate.Domain.Primitives;
+using E_Dukate.Application.DTOs.Common;
+using Microsoft.EntityFrameworkCore;
 
 namespace E_Dukate.Application.Services.Users;
 
@@ -107,5 +109,34 @@ public class AdministratorService : BaseService<Administrator, AdministratorDto>
         entity.Gender = dto.Gender;
         entity.DateOfBirth = dto.DateOfBirth;
         entity.Address = dto.Address;
+    }
+
+    public async Task<(IEnumerable<Administrator> Items, int TotalCount)> SearchAdministratorsAsync(string searchTerm, PaginationParams pagination)
+    {
+        var query = Repository.GetAll();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            searchTerm = searchTerm.ToLower();
+            query = query.Where(a =>
+                a.Names.ToLower().Contains(searchTerm) ||
+                a.LastNamePaternal.ToLower().Contains(searchTerm) ||
+                (a.LastNameMaternal != null && a.LastNameMaternal.ToLower().Contains(searchTerm)) ||
+                a.MobileNumber.Contains(searchTerm) ||
+                a.IdentityCard.ToString().Contains(searchTerm) ||
+                a.Age.ToString().Contains(searchTerm) ||
+                a.Gender.ToLower().Contains(searchTerm) ||
+                _userAuthRepository.GetAll().Any(u => u.UserId == a.Id && u.Email.ToLower().Contains(searchTerm))
+            );
+        }
+        
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderBy(a => a.Names)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
     }
 }
