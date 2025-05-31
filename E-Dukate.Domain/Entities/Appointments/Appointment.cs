@@ -13,9 +13,8 @@ public class Appointment : Primitives.Entity
     public required Specialist Specialist { get; set; }
     public Guid SpecialtyId { get; set; }
     public required Specialty Specialty { get; set; }
-    public DateTime StartTime { get; set; }
-    public DateTime EndTime { get; set; }
-    public List<Schedule>? Schedules { get; set; } = new List<Schedule>();
+    public DateTime? StartTime { get; set; }
+    public DateTime? EndTime { get; set; }
     public AppointmentStatus? Status { get; set; }
     public int SessionCount { get; set; }
     public Guid? PaymentId { get; set; }

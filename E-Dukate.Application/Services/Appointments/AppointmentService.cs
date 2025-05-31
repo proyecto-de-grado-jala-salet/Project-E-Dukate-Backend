@@ -202,8 +202,6 @@ public class AppointmentService : BaseService<Appointment, AppointmentDto>
             Specialist = specialist,
             SpecialtyId = dto.SpecialtyId,
             Specialty = specialty,
-            StartTime = dto.StartTime,
-            EndTime = dto.EndTime,
             SessionCount = dto.SessionCount
         };
     }
@@ -217,8 +215,6 @@ public class AppointmentService : BaseService<Appointment, AppointmentDto>
         entity.PatientId = dto.PatientId;
         entity.SpecialistId = dto.SpecialistId;
         entity.SpecialtyId = dto.SpecialtyId;
-        entity.StartTime = dto.StartTime;
-        entity.EndTime = dto.EndTime;
         entity.SessionCount = dto.SessionCount;
         entity.Patient = patient;
         entity.Specialist = specialist;

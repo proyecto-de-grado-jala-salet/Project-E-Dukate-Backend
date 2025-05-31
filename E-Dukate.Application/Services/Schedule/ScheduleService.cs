@@ -26,6 +26,7 @@ public class ScheduleService
 
     public Result UpdateSchedules(Guid specialistId, List<ScheduleDto> scheduleDtos)
     {
+        // Validar cada ScheduleDto
         foreach (var dto in scheduleDtos)
         {
             var validationResult = _validator.Validate(dto);
@@ -33,12 +34,24 @@ public class ScheduleService
                 return Result.Failure(string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
         }
 
+        // Obtener el especialista
         var specialist = _specialistRepository.GetAll()
             .FirstOrDefault(s => s.Id == specialistId);
         if (specialist == null)
-            return Result.Failure("Specialist not found.");
+            return Result.Failure("Especialista no encontrado.");
 
+        // Validar que ConsultationDuration coincide con el del especialista
+        foreach (var dto in scheduleDtos)
+        {
+            if (dto.ConsultationDuration != specialist.ConsultationDuration)
+            {
+                return Result.Failure($"La duración de la consulta debe ser {specialist.ConsultationDuration} minutos.");
+            }
+        }
+
+        // Eliminar horarios existentes
         var existingSchedules = _scheduleRepository.GetAll()
+            .Include(s => s.TimeSlots)
             .Where(s => s.SpecialistId == specialistId)
             .ToList();
 
@@ -46,7 +59,8 @@ public class ScheduleService
         {
             _scheduleRepository.Delete(schedule.Id);
         }
-        
+
+        // Crear nuevos horarios
         foreach (var dto in scheduleDtos)
         {
             var dayOfWeek = Enum.Parse<DayOfWeek>(dto.DayOfWeek, true);
@@ -59,10 +73,17 @@ public class ScheduleService
                 TimeSlots = dto.TimeSlots.Select(ts => new TimeSlot
                 {
                     StartTime = TimeOnly.Parse(ts.StartTime),
-                    EndTime = TimeOnly.Parse(ts.EndTime)
+                    EndTime = TimeOnly.Parse(ts.EndTime),
+                    ScheduleId = Guid.NewGuid() // Temporal, se actualizará después
                 }).ToList()
             };
             _scheduleRepository.Add(schedule);
+
+            // Actualizar ScheduleId en TimeSlots
+            foreach (var timeSlot in schedule.TimeSlots)
+            {
+                timeSlot.ScheduleId = schedule.Id;
+            }
         }
 
         return Result.Success();
@@ -70,6 +91,7 @@ public class ScheduleService
 
     public IEnumerable<Schedule> GetSchedulesBySpecialistId(Guid specialistId) =>
         _scheduleRepository.GetAll()
+            .Include(s => s.TimeSlots)
             .Where(s => s.SpecialistId == specialistId)
             .ToList();
 }

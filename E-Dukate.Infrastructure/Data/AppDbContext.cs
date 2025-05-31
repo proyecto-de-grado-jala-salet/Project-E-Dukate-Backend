@@ -6,6 +6,8 @@ using E_Dukate.Domain.Entities.Specialties;
 using E_Dukate.Domain.Entities.Schedules;
 using E_Dukate.Domain.Entities.Auth;
 using E_Dukate.Domain.Entities.MedicalHistories;
+using E_Dukate.Domain.Entities.Appointments;
+using E_Dukate.Domain.Entities.Payments;
 
 namespace E_Dukate.Infrastructure.Data;
 
@@ -16,11 +18,14 @@ public class AppDbContext : DbContext
     public DbSet<Patient> Patients { get; set; }
     public DbSet<Specialty> Specialties { get; set; }
     public DbSet<Schedule> Schedules { get; set; }
+    public DbSet<TimeSlot> TimeSlots { get; set; }
     public DbSet<LoginLog> LoginLogs { get; set; }
     public DbSet<UserAuth> UserAuths { get; set; }
     public DbSet<MedicalHistory> MedicalHistories { get; set; }
     public DbSet<MedicalHistoryPermission> MedicalHistoryPermissions { get; set; }
     public DbSet<MedicalConsultation> MedicalConsultations { get; set; }
+    public DbSet<Appointment> Appointments { get; set; }
+    public DbSet<Payment> Payments { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -31,12 +36,15 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Patient>().ToTable("Patients").HasKey(p => p.Id);
         modelBuilder.Entity<Specialty>().ToTable("Specialties").HasKey(s => s.Id);
         modelBuilder.Entity<Schedule>().ToTable("Schedules").HasKey(s => s.Id);
+        modelBuilder.Entity<TimeSlot>().ToTable("TimeSlots").HasKey(ts => ts.Id);
         modelBuilder.Entity<LoginLog>().ToTable("LoginLogs").HasKey(l => l.Id);
         modelBuilder.Entity<UserAuth>().ToTable("UserAuths").HasKey(u => u.Id);
         modelBuilder.Entity<MedicalHistory>().ToTable("MedicalHistories").HasKey(mh => mh.Id);
         modelBuilder.Entity<MedicalHistoryPermission>().ToTable("MedicalHistoryPermissions").HasKey(p => p.Id);
         modelBuilder.Entity<MedicalConsultation>().ToTable("MedicalConsultations").HasKey(c => c.Id);
-        
+        modelBuilder.Entity<Appointment>().ToTable("Appointments").HasKey(a => a.Id);
+        modelBuilder.Entity<Payment>().ToTable("Payments").HasKey(p => p.Id);
+
         modelBuilder.Entity<Patient>()
             .HasOne(p => p.MedicalHistory)
             .WithOne(mh => mh.Patient)
@@ -75,22 +83,78 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Schedule>()
             .HasOne(s => s.Specialist)
             .WithMany(s => s.Schedules)
-            .HasForeignKey(s => s.SpecialistId);
+            .HasForeignKey(s => s.SpecialistId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Schedule>()
-            .Property(s => s.TimeSlots)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
-                v => JsonSerializer.Deserialize<List<TimeSlot>>(v, (JsonSerializerOptions)null),
-                new ValueComparer<List<TimeSlot>>(
-                    (c1, c2) => c1.SequenceEqual(c2),
-                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.StartTime.GetHashCode(), v.EndTime.GetHashCode())),
-                    c => c.ToList()
-                ));
+        modelBuilder.Entity<TimeSlot>()
+            .HasOne(ts => ts.Schedule)
+            .WithMany(s => s.TimeSlots)
+            .HasForeignKey(ts => ts.ScheduleId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        // Índice único para UserAuth
         modelBuilder.Entity<UserAuth>()
             .HasIndex(u => u.Email)
             .IsUnique();
+
+        modelBuilder.Entity<Appointment>()
+            .HasOne(a => a.Patient)
+            .WithMany(p => p.Appointments)
+            .HasForeignKey(a => a.PatientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Appointment>()
+            .HasOne(a => a.Specialist)
+            .WithMany(s => s.Appointments)
+            .HasForeignKey(a => a.SpecialistId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Appointment>()
+            .HasOne(a => a.Specialty)
+            .WithMany()
+            .HasForeignKey(a => a.SpecialtyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Appointment>()
+            .HasOne(a => a.Payment)
+            .WithOne(p => p.Appointment)
+            .HasForeignKey<Appointment>(a => a.PaymentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Payment>()
+            .HasOne(p => p.Appointment)
+            .WithOne(a => a.Payment)
+            .HasForeignKey<Payment>(p => p.AppointmentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Payment>()
+            .HasOne(p => p.Patient)
+            .WithMany(p => p.Payments)
+            .HasForeignKey(p => p.PatientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Payment>()
+            .HasOne(p => p.Specialist)
+            .WithMany(s => s.Payments)
+            .HasForeignKey(p => p.SpecialistId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Payment>()
+            .Property(p => p.SessionCost)
+            .HasColumnType("decimal(18,2)");
+        modelBuilder.Entity<Payment>()
+            .Property(p => p.TotalAmount)
+            .HasColumnType("decimal(18,2)");
+        modelBuilder.Entity<Payment>()
+            .Property(p => p.AmountPaid)
+            .HasColumnType("decimal(18,2)");
+        modelBuilder.Entity<Payment>()
+            .Property(p => p.PendingAmount)
+            .HasColumnType("decimal(18,2)");
+        modelBuilder.Entity<Payment>()
+            .Property(p => p.SpecialistAmount)
+            .HasColumnType("decimal(18,2)");
+        modelBuilder.Entity<Payment>()
+            .Property(p => p.InstitutionAmount)
+            .HasColumnType("decimal(18,2)");
     }
 }
