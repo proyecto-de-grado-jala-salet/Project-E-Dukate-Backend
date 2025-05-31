@@ -118,7 +118,15 @@ public class AdministratorService : BaseService<Administrator, AdministratorDto>
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             searchTerm = searchTerm.ToLower();
+            
+            var searchTerms = searchTerm.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
             query = query.Where(a =>
+                (searchTerms.Length > 1
+                    ? searchTerms.Any(term => a.Names.ToLower().Contains(term)) &&
+                      (searchTerms.Any(term => a.LastNamePaternal.ToLower().Contains(term)) ||
+                       (a.LastNameMaternal != null && searchTerms.Any(term => a.LastNameMaternal.ToLower().Contains(term))))
+                    : false) ||
                 a.Names.ToLower().Contains(searchTerm) ||
                 a.LastNamePaternal.ToLower().Contains(searchTerm) ||
                 (a.LastNameMaternal != null && a.LastNameMaternal.ToLower().Contains(searchTerm)) ||

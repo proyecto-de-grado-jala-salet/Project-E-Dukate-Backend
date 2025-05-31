@@ -95,6 +95,8 @@ public class UserService
             }
         }
 
+        var searchTerms = searchTerm.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
         var admins = _adminRepository.GetAll()
             .Select(a => new UserDto
             {
@@ -106,6 +108,11 @@ public class UserService
                 Role = "Administrator"
             })
             .Where(a =>
+                (searchTerms.Length > 1
+                    ? searchTerms.Any(term => a.Names.ToLower().Contains(term)) &&
+                      (searchTerms.Any(term => a.LastNamePaternal.ToLower().Contains(term)) ||
+                       (a.LastNameMaternal != null && searchTerms.Any(term => a.LastNameMaternal.ToLower().Contains(term))))
+                    : false) ||
                 a.Names.ToLower().Contains(searchTerm) ||
                 a.LastNamePaternal.ToLower().Contains(searchTerm) ||
                 (a.LastNameMaternal != null && a.LastNameMaternal.ToLower().Contains(searchTerm)) ||
@@ -124,6 +131,11 @@ public class UserService
                 Role = "Specialist"
             })
             .Where(s =>
+                (searchTerms.Length > 1
+                    ? searchTerms.Any(term => s.Names.ToLower().Contains(term)) &&
+                      (searchTerms.Any(term => s.LastNamePaternal.ToLower().Contains(term)) ||
+                       (s.LastNameMaternal != null && searchTerms.Any(term => s.LastNameMaternal.ToLower().Contains(term))))
+                    : false) ||
                 s.Names.ToLower().Contains(searchTerm) ||
                 s.LastNamePaternal.ToLower().Contains(searchTerm) ||
                 (s.LastNameMaternal != null && s.LastNameMaternal.ToLower().Contains(searchTerm)) ||

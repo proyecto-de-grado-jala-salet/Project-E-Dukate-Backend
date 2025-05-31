@@ -148,7 +148,14 @@ public class SpecialistService : BaseService<Specialist, SpecialistDto>
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             searchTerm = searchTerm.ToLower();
+            var searchTerms = searchTerm.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
             query = query.Where(s =>
+                (searchTerms.Length > 1
+                    ? searchTerms.Any(term => s.Names.ToLower().Contains(term)) &&
+                      (searchTerms.Any(term => s.LastNamePaternal.ToLower().Contains(term)) ||
+                       (s.LastNameMaternal != null && searchTerms.Any(term => s.LastNameMaternal.ToLower().Contains(term))))
+                    : false) ||
                 s.Names.ToLower().Contains(searchTerm) ||
                 s.LastNamePaternal.ToLower().Contains(searchTerm) ||
                 (s.LastNameMaternal != null && s.LastNameMaternal.ToLower().Contains(searchTerm)) ||
@@ -161,7 +168,7 @@ public class SpecialistService : BaseService<Specialist, SpecialistDto>
                 _userAuthRepository.GetAll().Any(u => u.UserId == s.Id && u.Email.ToLower().Contains(searchTerm))
             );
         }
-        
+
         var totalCount = await query.CountAsync();
         var items = await query
             .OrderBy(s => s.Names)
