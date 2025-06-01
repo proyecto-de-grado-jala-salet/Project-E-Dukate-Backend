@@ -11,7 +11,6 @@ using E_Dukate.Application.DTOs.Specialties;
 using FluentValidation;
 using E_Dukate.Domain.Entities.Schedules;
 using E_Dukate.Application.Services;
-using E_Dukate.Application.Validators;
 using E_Dukate.Application.Services.WhatsApp;
 using E_Dukate.Infrastructure.Services;
 using E_Dukate.Application.DTOs.Schedules;
@@ -29,6 +28,7 @@ using E_Dukate.Domain.Entities.MedicalHistories;
 using E_Dukate.Application.Services.MedicalHistories;
 using E_Dukate.Application.DTOs.MedicalHistories;
 using E_Dukate.Application.Validators.MedicalHistories;
+using E_Dukate.Application.Validators.Schedule;
 
 namespace E_Dukate.Presentation.Configuration;
 
@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IGenericRepository<Patient>, GenericRepository<Patient>>();
         services.AddScoped<IGenericRepository<Specialty>, GenericRepository<Specialty>>();
         services.AddScoped<IGenericRepository<Schedule>, GenericRepository<Schedule>>();
+        services.AddScoped<IGenericRepository<TimeSlot>, GenericRepository<TimeSlot>>();
         services.AddScoped<IGenericRepository<LoginLog>, GenericRepository<LoginLog>>();
         services.AddScoped<IGenericRepository<UserAuth>, GenericRepository<UserAuth>>();
         services.AddScoped<IGenericRepository<MedicalHistory>, GenericRepository<MedicalHistory>>();
