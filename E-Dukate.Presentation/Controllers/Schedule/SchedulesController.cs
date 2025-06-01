@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using E_Dukate.Application.Services;
 using E_Dukate.Application.DTOs.Schedules;
+using E_Dukate.Application.DTOs.Common;
 
 namespace E_Dukate.Presentation.Controllers;
 
@@ -39,5 +40,31 @@ public class SchedulesController : ControllerBase
     {
         var schedules = _scheduleService.GetSchedulesBySpecialistId(specialistId);
         return Ok(schedules);
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchSpecialists(
+    [FromQuery] string searchTerm,
+    [FromQuery] PaginationParams pagination)
+    {
+        var (specialists, totalCount) = await _scheduleService
+            .SearchSpecialistsAsync(searchTerm, pagination);
+
+        var response = specialists.Select(s => new
+        {
+            s.Id,
+            s.Names,
+            s.LastNamePaternal,
+            s.LastNameMaternal,
+        });
+
+        return Ok(new
+        {
+            Items = response,
+            TotalCount = totalCount,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize)
+        });
     }
 }

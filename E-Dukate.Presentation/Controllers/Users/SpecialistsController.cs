@@ -86,10 +86,12 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
             specialist.SpecialistCode,
             Schedules = specialist.Schedules.Select(s => new
             {
+                s.Id,
                 DayOfWeek = s.DayOfWeek.ToString(),
                 Attends = s.Attends,
                 TimeSlots = s.TimeSlots.Select(ts => new
                 {
+                    s.Id,
                     StartTime = ts.StartTime.ToString("HH:mm"),
                     EndTime = ts.EndTime.ToString("HH:mm")
                 }).ToList()
@@ -101,11 +103,12 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
     [HttpGet]
     public override async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
     {
-        var specialists = _specialistService.GetAllSpecialists()
-            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
-            .Take(pagination.PageSize)
-            .ToList();
-        var totalCount = _specialistService.GetAllSpecialists().Count();
+        var specialists = await Task.Run(() => 
+            _specialistService.GetAllSpecialists()
+                .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                .Take(pagination.PageSize)
+                .ToList());
+        var totalCount = await Task.Run(() => _specialistService.GetAllSpecialists().Count());
 
         var userAuths = _userAuthRepository.GetAll()
             .Where(u => u.UserRole == "Specialist")
@@ -130,14 +133,58 @@ public class SpecialistsController : BaseController<Specialist, SpecialistDto>
             specialist.SpecialistCode,
             Schedules = specialist.Schedules.Select(s => new
             {
+                s.Id,
                 DayOfWeek = s.DayOfWeek.ToString(),
                 Attends = s.Attends,
                 TimeSlots = s.TimeSlots.Select(ts => new
                 {
+                    s.Id,
                     StartTime = ts.StartTime.ToString("HH:mm"),
                     EndTime = ts.EndTime.ToString("HH:mm")
                 }).ToList()
             }).ToList()
+        });
+
+        return Ok(new
+        {
+            Items = response,
+            TotalCount = totalCount,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize)
+        });
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string searchTerm, [FromQuery] PaginationParams pagination)
+    {
+        var (items, totalCount) = await _specialistService.SearchSpecialistsAsync(searchTerm, pagination);
+        if (!items.Any())
+        {
+            return Ok(new { Message = "No se encontraron resultados de lo buscado" });
+        }
+
+        var userAuths = _userAuthRepository.GetAll()
+            .Where(u => u.UserRole == "Specialist")
+            .ToDictionary(u => u.UserId, u => u.Email);
+        
+        var response = items.Select(specialist => new
+        {
+            specialist.Id,
+            specialist.Names,
+            specialist.LastNamePaternal,
+            specialist.LastNameMaternal,
+            specialist.MobileNumber,
+            specialist.IdentityCard,
+            specialist.PhoneNumber,
+            specialist.Age,
+            specialist.Gender,
+            specialist.DateOfBirth,
+            specialist.Address,
+            Email = userAuths.ContainsKey(specialist.Id) ? userAuths[specialist.Id] : string.Empty,
+            Specialty = specialist.Specialty?.TypeOfSpecialty,
+            specialist.YearsOfExperience,
+            specialist.SpecialistCode
         });
 
         return Ok(new

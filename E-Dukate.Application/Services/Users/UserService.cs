@@ -3,6 +3,7 @@ using E_Dukate.Application.DTOs.Users;
 using E_Dukate.Domain.Entities.Users;
 using Microsoft.EntityFrameworkCore;
 using E_Dukate.Application.DTOs.Common;
+using FuzzySharp; // Importar FuzzySharp
 
 namespace E_Dukate.Application.Services.Users;
 
@@ -26,7 +27,7 @@ public class UserService
             Id = a.Id,
             Names = a.Names,
             LastNamePaternal = a.LastNamePaternal,
-            LastNameMaternal = a.LastNameMaternal,
+            LastNameMaternal = a.LastNameMaternal ?? string.Empty,
             MobileNumber = a.MobileNumber,
             Role = "Administrator"
         });
@@ -36,7 +37,7 @@ public class UserService
             Id = s.Id,
             Names = s.Names,
             LastNamePaternal = s.LastNamePaternal,
-            LastNameMaternal = s.LastNameMaternal,
+            LastNameMaternal = s.LastNameMaternal ?? string.Empty,
             MobileNumber = s.MobileNumber,
             Role = "Specialist"
         });
@@ -65,5 +66,92 @@ public class UserService
             default:
                 throw new Exception("Invalid role specified.");
         }
+    }
+    
+    public async Task<(IEnumerable<UserDto> Items, int TotalCount)> SearchUsersAsync(string searchTerm, PaginationParams pagination)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return await GetAllUsersAsync(pagination);
+        }
+        searchTerm = searchTerm.ToLower();
+        
+        var roles = new[]
+        {
+            new { Spanish = "especialista", English = "specialist" },
+            new { Spanish = "administrador", English = "administrator" }
+        };
+
+        string? matchedRole = null;
+        int similarityThreshold = 50;
+        foreach (var role in roles)
+        {
+            int spanishSimilarity = Fuzz.Ratio(searchTerm, role.Spanish);
+            int englishSimilarity = Fuzz.Ratio(searchTerm, role.English);
+            if (spanishSimilarity >= similarityThreshold || englishSimilarity >= similarityThreshold)
+            {
+                matchedRole = role.English;
+                break;
+            }
+        }
+
+        var searchTerms = searchTerm.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        var admins = _adminRepository.GetAll()
+            .Select(a => new UserDto
+            {
+                Id = a.Id,
+                Names = a.Names,
+                LastNamePaternal = a.LastNamePaternal,
+                LastNameMaternal = a.LastNameMaternal ?? string.Empty,
+                MobileNumber = a.MobileNumber,
+                Role = "Administrator"
+            })
+            .Where(a =>
+                (searchTerms.Length > 1
+                    ? searchTerms.Any(term => a.Names.ToLower().Contains(term)) &&
+                      (searchTerms.Any(term => a.LastNamePaternal.ToLower().Contains(term)) ||
+                       (a.LastNameMaternal != null && searchTerms.Any(term => a.LastNameMaternal.ToLower().Contains(term))))
+                    : false) ||
+                a.Names.ToLower().Contains(searchTerm) ||
+                a.LastNamePaternal.ToLower().Contains(searchTerm) ||
+                (a.LastNameMaternal != null && a.LastNameMaternal.ToLower().Contains(searchTerm)) ||
+                a.MobileNumber.Contains(searchTerm) ||
+                (matchedRole == "administrator" && a.Role.ToLower() == "administrator")
+            );
+        
+        var specialists = _specialistRepository.GetAll()
+            .Select(s => new UserDto
+            {
+                Id = s.Id,
+                Names = s.Names,
+                LastNamePaternal = s.LastNamePaternal,
+                LastNameMaternal = s.LastNameMaternal ?? string.Empty,
+                MobileNumber = s.MobileNumber,
+                Role = "Specialist"
+            })
+            .Where(s =>
+                (searchTerms.Length > 1
+                    ? searchTerms.Any(term => s.Names.ToLower().Contains(term)) &&
+                      (searchTerms.Any(term => s.LastNamePaternal.ToLower().Contains(term)) ||
+                       (s.LastNameMaternal != null && searchTerms.Any(term => s.LastNameMaternal.ToLower().Contains(term))))
+                    : false) ||
+                s.Names.ToLower().Contains(searchTerm) ||
+                s.LastNamePaternal.ToLower().Contains(searchTerm) ||
+                (s.LastNameMaternal != null && s.LastNameMaternal.ToLower().Contains(searchTerm)) ||
+                s.MobileNumber.Contains(searchTerm) ||
+                (matchedRole == "specialist" && s.Role.ToLower() == "specialist")
+            );
+
+        var allUsersQuery = admins.Concat(specialists);
+        
+        var totalCount = await allUsersQuery.CountAsync();
+        var items = await allUsersQuery
+            .OrderBy(u => u.Names)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
     }
 }

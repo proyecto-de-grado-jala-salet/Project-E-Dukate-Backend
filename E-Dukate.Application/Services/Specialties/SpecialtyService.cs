@@ -1,9 +1,11 @@
 using E_Dukate.Domain.Interfaces;
 using E_Dukate.Application.DTOs.Specialties;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using E_Dukate.Application.Utilities;
 using E_Dukate.Domain.Entities.Specialties;
 using E_Dukate.Domain.Primitives;
+using E_Dukate.Application.DTOs.Common;
 
 namespace E_Dukate.Application.Services.Specialties;
 
@@ -17,7 +19,7 @@ public class SpecialtyService : BaseService<Specialty, SpecialtyDto>
         _repository = repository;
     }
 
-    public Result Register(SpecialtyDto dto)
+    public override Result Register(SpecialtyDto dto)
     {
         var validationResult = Validator.Validate(dto);
         if (!validationResult.IsValid)
@@ -39,7 +41,7 @@ public class SpecialtyService : BaseService<Specialty, SpecialtyDto>
         return Result.Success();
     }
 
-    public Result Update(Guid id, SpecialtyDto dto)
+    public override Result Update(Guid id, SpecialtyDto dto)
     {
         var validationResult = Validator.Validate(dto);
         if (!validationResult.IsValid)
@@ -73,5 +75,27 @@ public class SpecialtyService : BaseService<Specialty, SpecialtyDto>
     protected override void UpdateEntity(Specialty entity, SpecialtyDto dto)
     {
         entity.TypeOfSpecialty = dto.TypeOfSpecialty;
+    }
+
+    public async Task<(IEnumerable<Specialty> Items, int TotalCount)> SearchSpecialtiesAsync(string searchTerm, PaginationParams pagination)
+    {
+        var query = _repository.GetAll();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            searchTerm = searchTerm.ToLower();
+            query = query.Where(s =>
+                s.TypeOfSpecialty.ToLower().Contains(searchTerm)
+            );
+        }
+        
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderBy(s => s.TypeOfSpecialty)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
     }
 }
