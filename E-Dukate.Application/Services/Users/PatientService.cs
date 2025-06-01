@@ -4,6 +4,8 @@ using FluentValidation;
 using E_Dukate.Domain.Entities.Users;
 using E_Dukate.Domain.Entities.MedicalHistories;
 using E_Dukate.Domain.Primitives;
+using E_Dukate.Application.DTOs.Common;
+using Microsoft.EntityFrameworkCore;
 
 namespace E_Dukate.Application.Services.Users;
 
@@ -28,7 +30,7 @@ public class PatientService : BaseService<Patient, PatientDto>
 
         var patient = MapToEntity(dto);
         Repository.Add(patient);
-        
+
         var medicalHistory = new MedicalHistory
         {
             PatientId = patient.Id,
@@ -72,5 +74,40 @@ public class PatientService : BaseService<Patient, PatientDto>
         entity.Gender = dto.Gender;
         entity.DateOfBirth = dto.DateOfBirth;
         entity.Address = dto.Address;
+    }
+
+    public async Task<(IEnumerable<Patient> Items, int TotalCount)> SearchPatientsAsync(string searchTerm, PaginationParams pagination)
+    {
+        var query = Repository.GetAll();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            searchTerm = searchTerm.ToLower();
+            var searchTerms = searchTerm.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            query = query.Where(p =>
+                (searchTerms.Length > 1
+                    ? searchTerms.Any(term => p.Names.ToLower().Contains(term)) &&
+                      (searchTerms.Any(term => p.LastNamePaternal.ToLower().Contains(term)) ||
+                       (p.LastNameMaternal != null && searchTerms.Any(term => p.LastNameMaternal.ToLower().Contains(term))))
+                    : false) ||
+                p.Names.ToLower().Contains(searchTerm) ||
+                p.LastNamePaternal.ToLower().Contains(searchTerm) ||
+                (p.LastNameMaternal != null && p.LastNameMaternal.ToLower().Contains(searchTerm)) ||
+                p.MobileNumber.Contains(searchTerm) ||
+                p.IdentityCard.ToString().Contains(searchTerm) ||
+                p.Age.ToString().Contains(searchTerm) ||
+                p.Gender.ToLower().Contains(searchTerm)
+            );
+        }
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderBy(p => p.Names)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
     }
 }

@@ -121,9 +121,12 @@ public class ShowSpecialistsHandler : IConversationStateHandler
             var events = await _googleCalendarService.ListEventsAsync(specialistId, date, date.AddDays(1));
             foreach (var evt in events)
             {
-                if (evt.Start.DateTime.HasValue && evt.End.DateTime.HasValue)
+                if (evt.Start.DateTimeDateTimeOffset.HasValue && evt.End.DateTimeDateTimeOffset.HasValue)
                 {
-                    occupiedSlots.Add((evt.Start.DateTime.Value, evt.End.DateTime.Value));
+                    occupiedSlots.Add((
+                        evt.Start.DateTimeDateTimeOffset.Value.DateTime,
+                        evt.End.DateTimeDateTimeOffset.Value.DateTime
+                    ));
                 }
             }
         }

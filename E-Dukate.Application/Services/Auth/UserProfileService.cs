@@ -1,6 +1,7 @@
 using E_Dukate.Domain.Entities.Users;
 using E_Dukate.Domain.Interfaces;
 using E_Dukate.Application.Interfaces.Auth;
+using Microsoft.EntityFrameworkCore;
 
 namespace E_Dukate.Application.Services.Auth;
 public class UserProfileService : IUserProfileService
@@ -22,14 +23,14 @@ public class UserProfileService : IUserProfileService
         switch (role.ToLower())
         {
             case "administrator":
-                var admin = _administratorRepository.GetAll().FirstOrDefault(a => a.Id == userId);
+                var admin = await _administratorRepository.GetAll().FirstOrDefaultAsync(a => a.Id == userId);
                 if (admin != null)
-                    fullName = $"{admin.Names} {admin.LastNamePaternal}";
+                    fullName = admin != null ? $"{admin.Names} {admin.LastNamePaternal}" : fullName;
                 break;
             case "specialist":
-                var specialist = _specialistRepository.GetAll().FirstOrDefault(s => s.Id == userId);
+                var specialist = await _specialistRepository.GetAll().FirstOrDefaultAsync(s => s.Id == userId);
                 if (specialist != null)
-                    fullName = $"{specialist.Names} {specialist.LastNamePaternal}";
+                    fullName = specialist != null ? $"{specialist.Names} {specialist.LastNamePaternal}" : fullName;
                 break;
         }
         return fullName;

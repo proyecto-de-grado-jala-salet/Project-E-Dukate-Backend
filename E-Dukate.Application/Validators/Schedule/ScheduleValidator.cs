@@ -1,7 +1,7 @@
 using FluentValidation;
 using E_Dukate.Application.DTOs.Schedules;
 
-namespace E_Dukate.Application.Validators;
+namespace E_Dukate.Application.Validators.Schedule;
 
 public class ScheduleValidator : AbstractValidator<ScheduleDto>
 {
@@ -22,8 +22,12 @@ public class ScheduleValidator : AbstractValidator<ScheduleDto>
                 .Must(BeValidTime).WithMessage("Invalid end time format (use HH:mm).");
 
             timeSlot.RuleFor(ts => ts)
-                .Must(ts => TimeOnly.Parse(ts.EndTime) > TimeOnly.Parse(ts.StartTime))
-                .WithMessage("End time must be after start time.");
+                .Must(ts =>
+                    TimeOnly.TryParse(ts.EndTime, out var endTime) &&
+                    TimeOnly.TryParse(ts.StartTime, out var startTime) &&
+                    endTime > startTime
+                )
+                .WithMessage("End time must be after start time."); 
         });
 
         RuleFor(x => x.TimeSlots)
@@ -31,14 +35,16 @@ public class ScheduleValidator : AbstractValidator<ScheduleDto>
             .WithMessage("Time slots must be sequential and non-overlapping. Each StartTime must be after or equal to the previous EndTime.");
     }
 
-    private bool BeValidDayOfWeek(string dayOfWeek)
+    private bool BeValidDayOfWeek(string? dayOfWeek)
     {
-        return Enum.TryParse<DayOfWeek>(dayOfWeek, true, out _);
+        return !string.IsNullOrEmpty(dayOfWeek) &&
+               Enum.TryParse<DayOfWeek>(dayOfWeek, true, out _);
     }
 
-    private bool BeValidTime(string time)
+    private bool BeValidTime(string? time)
     {
-        return TimeOnly.TryParse(time, out _);
+        return !string.IsNullOrEmpty(time) &&
+               TimeOnly.TryParse(time, out _);
     }
 
     private bool BeNonOverlappingAndSequential(IList<TimeSlotDto> timeSlots)
@@ -46,20 +52,22 @@ public class ScheduleValidator : AbstractValidator<ScheduleDto>
         if (timeSlots == null || timeSlots.Count <= 1)
             return true;
 
-        var orderedTimeSlots = timeSlots
-            .Select(ts => new { Start = TimeOnly.Parse(ts.StartTime), End = TimeOnly.Parse(ts.EndTime) })
-            .OrderBy(ts => ts.Start)
-            .ToList();
-
-        for (int i = 1; i < orderedTimeSlots.Count; i++)
+        var parsedSlots = new List<(TimeOnly Start, TimeOnly End)>();
+        foreach (var ts in timeSlots)
         {
-            var previousSlot = orderedTimeSlots[i - 1];
-            var currentSlot = orderedTimeSlots[i];
-
-            if (currentSlot.Start < previousSlot.End)
+            if (!TimeOnly.TryParse(ts.StartTime, out var start) ||
+                !TimeOnly.TryParse(ts.EndTime, out var end))
             {
                 return false;
             }
+            parsedSlots.Add((start, end));
+        }
+
+        var orderedSlots = parsedSlots.OrderBy(ts => ts.Start).ToList();
+        for (int i = 1; i < orderedSlots.Count; i++)
+        {
+            if (orderedSlots[i].Start < orderedSlots[i - 1].End)
+                return false;
         }
 
         return true;

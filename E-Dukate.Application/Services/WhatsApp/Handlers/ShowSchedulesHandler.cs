@@ -64,7 +64,7 @@ public class ShowSchedulesHandler : IConversationStateHandler
 
         var patientDto = new PatientDto
         {
-            Names = state.PatientData.Names,
+            Names = state.PatientData!.Names,
             LastNamePaternal = state.PatientData.LastNamePaternal,
             LastNameMaternal = state.PatientData.LastNameMaternal ?? "",
             MobileNumber = PhoneNumberUtils.NormalizePhoneNumber(state.PatientData.MobileNumber),
@@ -95,7 +95,8 @@ public class ShowSchedulesHandler : IConversationStateHandler
             patient = _patientService.ListAll().FirstOrDefault(p =>
                 p.IdentityCard == patientDto.IdentityCard &&
                 p.Names == patientDto.Names &&
-                p.LastNamePaternal == patientDto.LastNamePaternal);
+                p.LastNamePaternal == patientDto.LastNamePaternal)?? 
+                throw new InvalidOperationException("Paciente no encontrado después de registro");
 
             if (patient == null)
             {
@@ -120,8 +121,10 @@ public class ShowSchedulesHandler : IConversationStateHandler
         );
         var appointmentEndTime = appointmentStartTime.AddMinutes(45);
 
-        var specialist = _specialistService.GetSpecialistById(state.SelectedSpecialistId);
-        var specialty = _specialtyService.FindById(state.SelectedSpecialtyId);
+        var specialist = _specialistService.GetSpecialistById(state.SelectedSpecialistId)?? 
+                     throw new InvalidOperationException("Especialista no encontrado");
+        var specialty = _specialtyService.FindById(state.SelectedSpecialtyId)?? 
+                    throw new InvalidOperationException("Especialidad no encontrada");
 
         var appointment = new Appointment
         {

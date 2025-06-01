@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace E_Dukate.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250520004138_InitialCreate")]
+    [Migration("20250601020651_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -175,15 +175,33 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.Property<Guid>("SpecialistId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("TimeSlots")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.HasIndex("SpecialistId");
 
                     b.ToTable("Schedules", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.TimeSlot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<Guid>("ScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScheduleId");
+
+                    b.ToTable("TimeSlots", (string)null);
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.Specialties.Specialty", b =>
@@ -414,6 +432,17 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.Navigation("Specialist");
                 });
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.TimeSlot", b =>
+                {
+                    b.HasOne("E_Dukate.Domain.Entities.Schedules.Schedule", "Schedule")
+                        .WithMany("TimeSlots")
+                        .HasForeignKey("ScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Schedule");
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.Users.Specialist", b =>
                 {
                     b.HasOne("E_Dukate.Domain.Entities.Specialties.Specialty", "Specialty")
@@ -433,6 +462,11 @@ namespace E_Dukate.Infrastructure.Migrations
             modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistoryPermission", b =>
                 {
                     b.Navigation("Consultations");
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.Schedule", b =>
+                {
+                    b.Navigation("TimeSlots");
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.Users.Patient", b =>
