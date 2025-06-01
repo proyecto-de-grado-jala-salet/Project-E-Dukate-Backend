@@ -19,7 +19,7 @@ public class SpecialtyService : BaseService<Specialty, SpecialtyDto>
         _repository = repository;
     }
 
-    public Result Register(SpecialtyDto dto)
+    public override Result Register(SpecialtyDto dto)
     {
         var validationResult = Validator.Validate(dto);
         if (!validationResult.IsValid)
@@ -41,7 +41,7 @@ public class SpecialtyService : BaseService<Specialty, SpecialtyDto>
         return Result.Success();
     }
 
-    public Result Update(Guid id, SpecialtyDto dto)
+    public override Result Update(Guid id, SpecialtyDto dto)
     {
         var validationResult = Validator.Validate(dto);
         if (!validationResult.IsValid)

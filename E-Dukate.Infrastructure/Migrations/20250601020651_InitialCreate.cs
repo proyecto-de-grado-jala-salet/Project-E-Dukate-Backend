@@ -180,7 +180,6 @@ namespace E_Dukate.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     SpecialistId = table.Column<Guid>(type: "uuid", nullable: false),
                     DayOfWeek = table.Column<int>(type: "integer", nullable: false),
-                    TimeSlots = table.Column<string>(type: "text", nullable: false),
                     Attends = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
@@ -222,6 +221,26 @@ namespace E_Dukate.Infrastructure.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "TimeSlots",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ScheduleId = table.Column<Guid>(type: "uuid", nullable: false),
+                    StartTime = table.Column<TimeOnly>(type: "time without time zone", nullable: false),
+                    EndTime = table.Column<TimeOnly>(type: "time without time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TimeSlots", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TimeSlots_Schedules_ScheduleId",
+                        column: x => x.ScheduleId,
+                        principalTable: "Schedules",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_MedicalConsultations_PermissionId",
                 table: "MedicalConsultations",
@@ -259,6 +278,11 @@ namespace E_Dukate.Infrastructure.Migrations
                 column: "SpecialtyId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TimeSlots_ScheduleId",
+                table: "TimeSlots",
+                column: "ScheduleId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserAuths_Email",
                 table: "UserAuths",
                 column: "Email",
@@ -278,13 +302,16 @@ namespace E_Dukate.Infrastructure.Migrations
                 name: "MedicalConsultations");
 
             migrationBuilder.DropTable(
-                name: "Schedules");
+                name: "TimeSlots");
 
             migrationBuilder.DropTable(
                 name: "UserAuths");
 
             migrationBuilder.DropTable(
                 name: "MedicalHistoryPermissions");
+
+            migrationBuilder.DropTable(
+                name: "Schedules");
 
             migrationBuilder.DropTable(
                 name: "MedicalHistories");
