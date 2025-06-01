@@ -20,7 +20,7 @@ public class AskIdentityCardHandler : IConversationStateHandler
             return;
         }
 
-        state.PatientData.IdentityCard = identityCard;
+        state.PatientData!.IdentityCard = identityCard;
         state.Step = ConversationStep.AskDateOfBirth;
         await _whatsAppService.SendTextMessageAsync(phoneNumber, "Gracias. Ingresa tu fecha de nacimiento (formato: DD/MM/YYYY, ejemplo: 16/08/2004).");
     }

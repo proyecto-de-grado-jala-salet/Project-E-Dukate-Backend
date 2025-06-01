@@ -43,18 +43,17 @@ public class GoogleCalendarService : IGoogleCalendarService
             {
                 Summary = $"Cita: {appointment.Specialty.TypeOfSpecialty} {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal}",
                 Description = $@"Cita médica con el especialista {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal} para el paciente {appointment.Patient.Names} {appointment.Patient.LastNamePaternal}.
-                    Cédula: {appointment.Patient.IdentityCard}
-                    Género: {appointment.Patient.Gender}
-                    Dirección: {appointment.Patient.Address}
-                    SpecialistId: {appointment.Specialist.Id}",
+                Cédula: {appointment.Patient.IdentityCard}
+                Género: {appointment.Patient.Gender}
+                Dirección: {appointment.Patient.Address}",
                 Start = new EventDateTime
                 {
-                    DateTime = appointment.StartTime,
+                    DateTimeDateTimeOffset = new DateTimeOffset(appointment.StartTime, TimeSpan.FromHours(-4)),
                     TimeZone = "America/La_Paz"
                 },
                 End = new EventDateTime
                 {
-                    DateTime = appointment.EndTime,
+                    DateTimeDateTimeOffset = new DateTimeOffset(appointment.EndTime, TimeSpan.FromHours(-4)),
                     TimeZone = "America/La_Paz"
                 }
             };
@@ -69,17 +68,16 @@ public class GoogleCalendarService : IGoogleCalendarService
             return false;
         }
     }
-    
+
     public async Task<List<Event>> ListEventsAsync(Guid specialistId, DateTime startDate, DateTime endDate)
     {
         try
         {
             var request = _calendarService.Events.List(_calendarId);
-            request.TimeMin = startDate;
-            request.TimeMax = endDate;
+            request.TimeMinDateTimeOffset = new DateTimeOffset(startDate, TimeSpan.FromHours(-4));
+            request.TimeMaxDateTimeOffset = new DateTimeOffset(endDate, TimeSpan.FromHours(-4));
             request.ShowDeleted = false;
             request.SingleEvents = true;
-            request.Q = $"SpecialistId: {specialistId}";
 
             var events = await request.ExecuteAsync();
             return events.Items?.ToList() ?? new List<Event>();

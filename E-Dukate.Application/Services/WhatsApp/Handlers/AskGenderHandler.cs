@@ -21,7 +21,7 @@ public class AskGenderHandler : IConversationStateHandler
             return;
         }
 
-        state.PatientData.Gender = message == "Masculino" ? "M" : "F";
+        state.PatientData!.Gender = message == "Masculino" ? "M" : "F";
         state.Step = ConversationStep.AskAddress;
         await _whatsAppService.SendTextMessageAsync(phoneNumber, "Gracias. Ingresa tu dirección.");
     }

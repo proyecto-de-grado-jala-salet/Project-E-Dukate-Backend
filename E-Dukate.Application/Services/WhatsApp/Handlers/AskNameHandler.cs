@@ -20,7 +20,7 @@ public class AskNameHandler : IConversationStateHandler
             return;
         }
 
-        state.PatientData.Names = message.Trim();
+        state.PatientData!.Names = message.Trim();
         state.Step = ConversationStep.AskLastNamePaternal;
         await _whatsAppService.SendTextMessageAsync(phoneNumber, "Gracias. Ahora ingresa tu apellido paterno.");
     }
