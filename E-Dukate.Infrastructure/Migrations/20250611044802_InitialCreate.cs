@@ -33,6 +33,19 @@ namespace E_Dukate.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Faqs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Question = table.Column<string>(type: "text", nullable: false),
+                    Answer = table.Column<string>(type: "text", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Faqs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "LoginLogs",
                 columns: table => new
                 {
@@ -294,6 +307,9 @@ namespace E_Dukate.Infrastructure.Migrations
         {
             migrationBuilder.DropTable(
                 name: "Administrators");
+
+            migrationBuilder.DropTable(
+                name: "Faqs");
 
             migrationBuilder.DropTable(
                 name: "LoginLogs");

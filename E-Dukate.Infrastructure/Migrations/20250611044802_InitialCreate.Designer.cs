@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace E_Dukate.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250601020651_InitialCreate")]
+    [Migration("20250611044802_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -82,6 +82,25 @@ namespace E_Dukate.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("UserAuths", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.FAQ.Faq", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Answer")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Faqs", (string)null);
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalConsultation", b =>

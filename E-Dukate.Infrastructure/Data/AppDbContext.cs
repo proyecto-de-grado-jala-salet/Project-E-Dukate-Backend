@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using E_Dukate.Domain.Entities.Users;
 using E_Dukate.Domain.Entities.Specialties;
 using E_Dukate.Domain.Entities.Schedules;
 using E_Dukate.Domain.Entities.Auth;
 using E_Dukate.Domain.Entities.MedicalHistories;
+using E_Dukate.Domain.Entities.FAQ;
 
 namespace E_Dukate.Infrastructure.Data;
 
@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<MedicalHistory> MedicalHistories { get; set; }
     public DbSet<MedicalHistoryPermission> MedicalHistoryPermissions { get; set; }
     public DbSet<MedicalConsultation> MedicalConsultations { get; set; }
+    public DbSet<Faq> Faqs { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -37,6 +38,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<MedicalHistory>().ToTable("MedicalHistories").HasKey(mh => mh.Id);
         modelBuilder.Entity<MedicalHistoryPermission>().ToTable("MedicalHistoryPermissions").HasKey(p => p.Id);
         modelBuilder.Entity<MedicalConsultation>().ToTable("MedicalConsultations").HasKey(c => c.Id);
+        modelBuilder.Entity<Faq>().ToTable("Faqs").HasKey(f => f.Id);
         
         modelBuilder.Entity<Patient>()
             .HasOne(p => p.MedicalHistory)

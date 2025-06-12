@@ -17,7 +17,6 @@ using E_Dukate.Application.DTOs.Schedules;
 using E_Dukate.Application.Interfaces.WhatsApp;
 using E_Dukate.Application.Interfaces.GoogleCalendar;
 using E_Dukate.Application.Services.WhatsApp.Handlers;
-using E_Dukate.Application.Services.WhatsApp.Utilities;
 using E_Dukate.Infrastructure.Services.GoogleCalendar;
 using E_Dukate.Application.Services.Auth;
 using E_Dukate.Application.Validators.Auth;
@@ -29,6 +28,13 @@ using E_Dukate.Application.Services.MedicalHistories;
 using E_Dukate.Application.DTOs.MedicalHistories;
 using E_Dukate.Application.Validators.MedicalHistories;
 using E_Dukate.Application.Validators.Schedule;
+using Microsoft.Extensions.Logging;
+using E_Dukate.Infrastructure.Services.Ollama;
+using E_Dukate.Application.Services.WhatsApp.Utilities;
+using E_Dukate.Domain.Entities.FAQ;
+using E_Dukate.Application.Services.FAQ;
+using E_Dukate.Application.DTOs.FAQ;
+using E_Dukate.Application.Validators.FAQ;
 
 namespace E_Dukate.Presentation.Configuration;
 
@@ -41,7 +47,8 @@ public static class DependencyInjection
             .AddServices()
             .AddValidators()
             .AddChatBotServices()
-            .AddGoogleCalendarServices();
+            .AddGoogleCalendarServices()
+            .AddLogging(builder => builder.AddConsole()); // Ensure console logging
     }
 
     private static IServiceCollection AddRepositories(this IServiceCollection services)
@@ -57,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<IGenericRepository<MedicalHistory>, GenericRepository<MedicalHistory>>();
         services.AddScoped<IGenericRepository<MedicalHistoryPermission>, GenericRepository<MedicalHistoryPermission>>();
         services.AddScoped<IGenericRepository<MedicalConsultation>, GenericRepository<MedicalConsultation>>();
+        services.AddScoped<IGenericRepository<Faq>, GenericRepository<Faq>>();
         return services;
     }
 
@@ -85,6 +93,7 @@ public static class DependencyInjection
         services.AddScoped<ShowSpecialistsHandler>();
         services.AddScoped<ShowSchedulesHandler>();
         services.AddSingleton<IConversationStateManager, ConversationStateManager>();
+        services.AddScoped<FaqService>();
         return services;
     }
 
@@ -98,6 +107,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<LoginDto>, LoginValidator>();
         services.AddScoped<IValidator<UpdateMedicalConsultationDto>, UpdateMedicalConsultationDtoValidator>();
         services.AddScoped<UserAuthValidator>();
+        services.AddScoped<IValidator<FaqDto>, FaqValidator>();
         return services;
     }
 
@@ -105,7 +115,7 @@ public static class DependencyInjection
     {
         services.AddSingleton<IChatBotService, ChatBotService>();
         services.AddSingleton<IWhatsAppService, WhatsAppService>();
-        services.AddSingleton<IDialogflowService, DialogflowService>();
+        services.AddSingleton<IDialogflowService, OllamaService>();
         services.AddHttpClient();
         return services;
     }

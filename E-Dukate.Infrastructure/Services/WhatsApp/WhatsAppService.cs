@@ -23,19 +23,27 @@ public class WhatsAppService : IWhatsAppService
 
     public async Task SendTextMessageAsync(string phoneNumber, string message)
     {
+        if (string.IsNullOrWhiteSpace(phoneNumber) || string.IsNullOrWhiteSpace(message))
+        {
+            throw new ArgumentException("Phone number and message cannot be empty.");
+        }
+
         var payload = new
         {
             messaging_product = "whatsapp",
             to = phoneNumber,
             type = "text",
-            text = new { body = message }
+            text = new
+            {
+                body = message
+            }
         };
 
-        var response = await _httpClient.PostAsJsonAsync($"{_phoneNumberId}/messages", payload);
-        if (!response.IsSuccessStatusCode)
-        {
-            response.EnsureSuccessStatusCode();
-        }
+        var json = JsonSerializer.Serialize(payload);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await _httpClient.PostAsync($"{_phoneNumberId}/messages", content);
+        response.EnsureSuccessStatusCode();
     }
 
     public async Task SendInteractiveMessageAsync(string phoneNumber, string message, string buttonId, string buttonTitle)

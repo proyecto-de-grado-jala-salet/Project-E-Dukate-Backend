@@ -1,6 +1,6 @@
 using E_Dukate.Application.Interfaces.WhatsApp;
-using E_Dukate.Application.Services.WhatsApp.Utilities;
 using E_Dukate.Domain.Entities.Users;
+using Microsoft.Extensions.Logging;
 
 namespace E_Dukate.Application.Services.WhatsApp.Handlers;
 
@@ -8,24 +8,26 @@ public class StartAppointmentHandler : IConversationStateHandler
 {
     private readonly IWhatsAppService _whatsAppService;
     private readonly IDialogflowService _dialogflowService;
+    private readonly ILogger<StartAppointmentHandler> _logger;
 
     public StartAppointmentHandler(
         IWhatsAppService whatsAppService,
-        IDialogflowService dialogflowService)
+        IDialogflowService dialogflowService,
+        ILogger<StartAppointmentHandler> logger)
     {
         _whatsAppService = whatsAppService;
         _dialogflowService = dialogflowService;
+        _logger = logger;
     }
 
     public async Task HandleAsync(string phoneNumber, string message, ConversationState state)
     {
-        string intent = await _dialogflowService.DetectIntentAsync(phoneNumber, message);
+        _logger.LogInformation("Received message: '{Message}' for phone: '{PhoneNumber}'", message, phoneNumber);
 
-        var normalizedMessage = message.ToLower().Trim();
-        if (intent == "StartAppointment" || 
-            normalizedMessage == "reservar cita" || 
-            normalizedMessage.Contains("realizar una cita") || 
-            normalizedMessage.Contains("agendar cita"))
+        string response = await _dialogflowService.DetectIntentAsync(phoneNumber, message);
+        _logger.LogInformation("Ollama response: '{Response}' (Length: {Length})", response, response?.Length ?? 0);
+
+        if (response == "StartAppointment")
         {
             state.PatientData = new Patient { MobileNumber = phoneNumber };
             state.Step = ConversationStep.AskName;
@@ -34,11 +36,17 @@ public class StartAppointmentHandler : IConversationStateHandler
             state.SchedulePageIndex = 0;
             state.AvailableSchedules = new List<(string SlotId, string Title, string Description)>();
 
-            await _whatsAppService.SendTextMessageAsync(phoneNumber, "¡Hola! Vamos a reservar tu cita. Por favor, ingresa tu nombre.");
+            string startMessage = "¡Hola! Vamos a reservar tu cita. Por favor, ingresa tu nombre.";
+            _logger.LogInformation("Sending to WhatsApp: '{Message}'", startMessage);
+            await _whatsAppService.SendTextMessageAsync(phoneNumber, startMessage);
         }
         else
         {
-            await WhatsAppMessageUtils.SendErrorMessageAsync(_whatsAppService, phoneNumber, "No entendí tu mensaje. Di 'reservar cita' para comenzar.");
+            string messageToSend = string.IsNullOrEmpty(response)
+                ? "Lo siento, no entendí tu mensaje. ¿Quieres reservar una cita? Di 'reservar cita' para comenzar."
+                : response;
+            _logger.LogInformation("Sending to WhatsApp: '{Message}'", messageToSend);
+            await _whatsAppService.SendTextMessageAsync(phoneNumber, messageToSend);
         }
     }
 }

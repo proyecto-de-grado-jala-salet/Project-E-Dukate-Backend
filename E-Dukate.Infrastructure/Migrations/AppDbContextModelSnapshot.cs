@@ -81,6 +81,25 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.ToTable("UserAuths", (string)null);
                 });
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.FAQ.Faq", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Answer")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Faqs", (string)null);
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalConsultation", b =>
                 {
                     b.Property<Guid>("Id")
