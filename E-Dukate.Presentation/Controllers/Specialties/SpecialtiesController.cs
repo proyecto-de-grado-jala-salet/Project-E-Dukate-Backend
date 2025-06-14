@@ -3,6 +3,7 @@ using E_Dukate.Application.Services.Specialties;
 using E_Dukate.Application.DTOs.Specialties;
 using FluentValidation;
 using E_Dukate.Domain.Entities.Specialties;
+using E_Dukate.Application.DTOs.Common;
 
 namespace E_Dukate.Presentation.Controllers.Specialties;
 
@@ -33,5 +34,30 @@ public class SpecialtiesController : BaseController<Specialty, SpecialtyDto>
             return BadRequest(new { Error = result.ErrorMessage });
 
         return NoContent();
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string searchTerm, [FromQuery] PaginationParams pagination)
+    {
+        var (items, totalCount) = await _service.SearchSpecialtiesAsync(searchTerm, pagination);
+        if (!items.Any())
+        {
+            return Ok(new { Message = "No se encontraron resultados de lo buscado" });
+        }
+
+        var response = items.Select(specialty => new
+        {
+            specialty.Id,
+            specialty.TypeOfSpecialty
+        });
+
+        return Ok(new
+        {
+            Items = response,
+            TotalCount = totalCount,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize)
+        });
     }
 }
