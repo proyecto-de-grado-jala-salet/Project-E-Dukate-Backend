@@ -22,7 +22,7 @@ public class AskDateOfBirthHandler : IConversationStateHandler
             return;
         }
 
-        state.PatientData.DateOfBirth = dob;
+        state.PatientData!.DateOfBirth = dob;
         state.PatientData.Age = DateTimeUtils.CalculateAge(dob);
         state.Step = ConversationStep.AskGender;
         await WhatsAppMessageUtils.SendGenderSelectionAsync(_whatsAppService, phoneNumber);

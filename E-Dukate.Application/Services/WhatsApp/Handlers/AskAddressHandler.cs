@@ -23,7 +23,7 @@ public class AskAddressHandler : IConversationStateHandler
             return;
         }
 
-        state.PatientData.Address = message.Trim();
+        state.PatientData!.Address = message.Trim();
         state.Step = ConversationStep.ShowSpecialties;
 
         var specialties = _specialtyService.ListAll().Select(s => (s.Id.ToString(), s.TypeOfSpecialty, s.TypeOfSpecialty)).ToList();

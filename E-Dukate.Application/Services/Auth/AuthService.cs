@@ -4,6 +4,7 @@ using E_Dukate.Application.DTOs.Auth;
 using E_Dukate.Domain.Primitives;
 using E_Dukate.Application.Validators.Auth;
 using E_Dukate.Application.Interfaces.Auth;
+using Microsoft.EntityFrameworkCore;
 
 namespace E_Dukate.Application.Services.Auth;
 
@@ -54,7 +55,7 @@ public class AuthService
 
     private async Task<UserAuth?> FindUserByEmailAsync(string email)
     {
-        return _userAuthRepository.GetAll().FirstOrDefault(u => u.Email == email);
+        return await _userAuthRepository.GetAll().FirstOrDefaultAsync(u => u.Email == email);
     }
 
     private async Task<ValueResult<string>> VerifyPasswordAsync(UserAuth userAuth, string password)

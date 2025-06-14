@@ -7,6 +7,7 @@ using E_Dukate.Domain.Entities.Specialties;
 using E_Dukate.Domain.Entities.Auth;
 using E_Dukate.Application.Services.Auth;
 using E_Dukate.Domain.Primitives;
+using E_Dukate.Application.DTOs.Common;
 
 namespace E_Dukate.Application.Services.Users;
 
@@ -140,5 +141,43 @@ public class SpecialistService : BaseService<Specialist, SpecialistDto>
         entity.Specialty = specialty;
         entity.YearsOfExperience = dto.YearsOfExperience;
         entity.SpecialistCode = dto.SpecialistCode;
+    }
+
+    public async Task<(IEnumerable<Specialist> Items, int TotalCount)> SearchSpecialistsAsync(string searchTerm, PaginationParams pagination)
+    {
+        var query = Repository.GetAll().Include(s => s.Specialty).AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            searchTerm = searchTerm.ToLower();
+            var searchTerms = searchTerm.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            query = query.Where(s =>
+                (searchTerms.Length > 1
+                    ? searchTerms.Any(term => s.Names.ToLower().Contains(term)) &&
+                      (searchTerms.Any(term => s.LastNamePaternal.ToLower().Contains(term)) ||
+                       (s.LastNameMaternal != null && searchTerms.Any(term => s.LastNameMaternal.ToLower().Contains(term))))
+                    : false) ||
+                s.Names.ToLower().Contains(searchTerm) ||
+                s.LastNamePaternal.ToLower().Contains(searchTerm) ||
+                (s.LastNameMaternal != null && s.LastNameMaternal.ToLower().Contains(searchTerm)) ||
+                s.MobileNumber.Contains(searchTerm) ||
+                s.IdentityCard.ToString().Contains(searchTerm) ||
+                s.Age.ToString().Contains(searchTerm) ||
+                s.Gender.ToLower().Contains(searchTerm) ||
+                s.Specialty.TypeOfSpecialty.ToLower().Contains(searchTerm) ||
+                s.SpecialistCode.ToLower().Contains(searchTerm) ||
+                _userAuthRepository.GetAll().Any(u => u.UserId == s.Id && u.Email.ToLower().Contains(searchTerm))
+            );
+        }
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderBy(s => s.Names)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
     }
 }

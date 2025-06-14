@@ -20,7 +20,7 @@ public class AskLastNamePaternalHandler : IConversationStateHandler
             return;
         }
 
-        state.PatientData.LastNamePaternal = message.Trim();
+        state.PatientData!.LastNamePaternal = message.Trim();
         state.Step = ConversationStep.AskIdentityCard;
         await _whatsAppService.SendTextMessageAsync(phoneNumber, "Perfecto. Ingresa tu número de cédula de identidad (CI).");
     }
