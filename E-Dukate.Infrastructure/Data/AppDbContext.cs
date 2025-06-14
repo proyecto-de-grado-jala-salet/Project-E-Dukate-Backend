@@ -25,6 +25,7 @@ public class AppDbContext : DbContext
     public DbSet<MedicalHistoryPermission> MedicalHistoryPermissions { get; set; }
     public DbSet<MedicalConsultation> MedicalConsultations { get; set; }
     public DbSet<Appointment> Appointments { get; set; }
+    public DbSet<ScheduledSession> ScheduledSessions { get; set; }
     public DbSet<Payment> Payments { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -43,6 +44,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<MedicalHistoryPermission>().ToTable("MedicalHistoryPermissions").HasKey(p => p.Id);
         modelBuilder.Entity<MedicalConsultation>().ToTable("MedicalConsultations").HasKey(c => c.Id);
         modelBuilder.Entity<Appointment>().ToTable("Appointments").HasKey(a => a.Id);
+        modelBuilder.Entity<ScheduledSession>().ToTable("ScheduledSessions").HasKey(ss => ss.Id);
         modelBuilder.Entity<Payment>().ToTable("Payments").HasKey(p => p.Id);
 
         modelBuilder.Entity<Patient>()
@@ -117,14 +119,20 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Appointment>()
             .HasOne(a => a.Payment)
             .WithOne(p => p.Appointment)
-            .HasForeignKey<Appointment>(a => a.PaymentId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<Payment>()
-            .HasOne(p => p.Appointment)
-            .WithOne(a => a.Payment)
             .HasForeignKey<Payment>(p => p.AppointmentId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ScheduledSession>()
+            .HasOne(ss => ss.Appointment)
+            .WithMany(a => a.ScheduledSessions)
+            .HasForeignKey(ss => ss.AppointmentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ScheduledSession>()
+            .HasOne(ss => ss.TimeSlot)
+            .WithMany()
+            .HasForeignKey(ss => ss.TimeSlotId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Payment>()
             .HasOne(p => p.Patient)
@@ -138,23 +146,12 @@ public class AppDbContext : DbContext
             .HasForeignKey(p => p.SpecialistId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<ScheduledSession>()
+            .Property(ss => ss.Status)
+            .HasConversion<string>();
+
         modelBuilder.Entity<Payment>()
-            .Property(p => p.SessionCost)
-            .HasColumnType("decimal(18,2)");
-        modelBuilder.Entity<Payment>()
-            .Property(p => p.TotalAmount)
-            .HasColumnType("decimal(18,2)");
-        modelBuilder.Entity<Payment>()
-            .Property(p => p.AmountPaid)
-            .HasColumnType("decimal(18,2)");
-        modelBuilder.Entity<Payment>()
-            .Property(p => p.PendingAmount)
-            .HasColumnType("decimal(18,2)");
-        modelBuilder.Entity<Payment>()
-            .Property(p => p.SpecialistAmount)
-            .HasColumnType("decimal(18,2)");
-        modelBuilder.Entity<Payment>()
-            .Property(p => p.InstitutionAmount)
-            .HasColumnType("decimal(18,2)");
+            .Property(p => p.Status)
+            .HasConversion<string>();
     }
 }

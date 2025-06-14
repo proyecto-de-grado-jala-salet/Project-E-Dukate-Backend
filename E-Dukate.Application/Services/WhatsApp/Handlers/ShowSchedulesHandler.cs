@@ -131,8 +131,8 @@ public class ShowSchedulesHandler : IConversationStateHandler
             Specialist = specialist,
             SpecialtyId = specialty.Id,
             Specialty = specialty,
-            StartTime = appointmentStartTime,
-            EndTime = appointmentEndTime
+            // StartTime = appointmentStartTime,
+            // EndTime = appointmentEndTime
         };
 
         var eventCreated = await _googleCalendarService.CreateAppointmentEventAsync(appointment);

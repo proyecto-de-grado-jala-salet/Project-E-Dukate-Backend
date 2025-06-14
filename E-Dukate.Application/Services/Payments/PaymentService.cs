@@ -1,6 +1,7 @@
-using E_Dukate.Application.DTOs.Common;
 using E_Dukate.Application.DTOs.Payments;
+using E_Dukate.Application.DTOs.Common;
 using E_Dukate.Domain.Entities.Payments;
+using E_Dukate.Domain.Entities.Appointments;
 using E_Dukate.Domain.Interfaces;
 using E_Dukate.Domain.Primitives;
 using FluentValidation;
@@ -8,97 +9,124 @@ using Microsoft.EntityFrameworkCore;
 
 namespace E_Dukate.Application.Services.Payments;
 
-public class PaymentService : BaseService<Payment, PaymentDto>
+public class PaymentService
 {
     private readonly IGenericRepository<Payment> _paymentRepository;
+    private readonly IGenericRepository<Appointment> _appointmentRepository;
+    private readonly IValidator<PaymentDto> _validator;
 
     public PaymentService(
-        IGenericRepository<Payment> repository,
+        IGenericRepository<Payment> paymentRepository,
+        IGenericRepository<Appointment> appointmentRepository,
         IValidator<PaymentDto> validator)
-        : base(repository, validator)
     {
-        _paymentRepository = repository;
+        _paymentRepository = paymentRepository;
+        _appointmentRepository = appointmentRepository;
+        _validator = validator;
     }
 
-    public Result UpdatePaymentAmount(Guid id, decimal totalAmountPaid)
+    public async Task<Result> UpdatePaymentAsync(Guid id, PaymentDto dto)
     {
-        var payment = _paymentRepository.GetById(id);
+        var validationResult = _validator.Validate(dto);
+        if (!validationResult.IsValid)
+            return Result.Failure(string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
+
+        var payment = await _paymentRepository.GetAll()
+            .Include(p => p.Appointment)
+            .FirstOrDefaultAsync(p => p.Id == id);
         if (payment == null)
             return Result.Failure("Pago no encontrado.");
 
-        if (totalAmountPaid < 0 || totalAmountPaid > payment.TotalAmount)
-            return Result.Failure("El monto pagado es inválido.");
+        // Actualizar solo el AmountPaid y recalcular los campos derivados
+        payment.AmountPaid = dto.AmountPaid;
+        payment.PendingAmount = payment.TotalAmount - dto.AmountPaid;
+        payment.LastPaymentDate = payment.AmountPaid > 0 ? (payment.LastPaymentDate ?? DateTime.UtcNow) : payment.LastPaymentDate;
 
-        // Establecemos el monto pagado directamente (no sumamos)
-        payment.AmountPaid = totalAmountPaid;
-        payment.PendingAmount = payment.TotalAmount - payment.AmountPaid;
-        payment.Status = payment.PendingAmount == 0 ? PaymentStatus.Completed : PaymentStatus.Pending;
+        // Actualizar el estado del pago
+        if (payment.AmountPaid >= payment.TotalAmount)
+        {
+            payment.Status = PaymentStatus.Completed;
+            payment.PendingAmount = 0;
+            payment.LastPaymentDate = payment.LastPaymentDate ?? DateTime.UtcNow;
+        }
+        else
+        {
+            payment.Status = PaymentStatus.Pending;
+        }
 
-        // Actualizamos las fechas
-        if (payment.FirstPaymentDate == null && totalAmountPaid > 0)
-            payment.FirstPaymentDate = DateTime.UtcNow;
-
-        if (totalAmountPaid > 0)
-            payment.LastPaymentDate = DateTime.UtcNow;
-
-        _paymentRepository.Update(payment);
+        await _paymentRepository.UpdateAsync(payment);
         return Result.Success();
     }
 
-    public override Payment? FindById(Guid id)
+    public async Task<Result> DeletePaymentAsync(Guid id)
     {
-        return _paymentRepository.GetAll()
+        var payment = await _paymentRepository.GetByIdAsync(id);
+        if (payment == null)
+            return Result.Failure("Pago no encontrado.");
+
+        var appointment = await _appointmentRepository.GetByIdAsync(payment.AppointmentId);
+        if (appointment != null)
+        {
+            appointment.PaymentId = null;
+            appointment.Payment = null;
+            await _appointmentRepository.UpdateAsync(appointment);
+        }
+
+        await _paymentRepository.DeleteAsync(id);
+        return Result.Success();
+    }
+
+    public async Task<Result> UpdatePaymentOnSessionCancellationAsync(Guid appointmentId)
+    {
+        var appointment = await _appointmentRepository.GetAll()
+            .Include(a => a.ScheduledSessions)
+            .Include(a => a.Payment)
+            .FirstOrDefaultAsync(a => a.Id == appointmentId);
+        if (appointment == null)
+            return Result.Failure("Cita no encontrada.");
+
+        if (appointment.Payment == null)
+            return Result.Success();
+
+        var activeSessionCount = appointment.ScheduledSessions
+            .Count(ss => ss.Status != ScheduledSessionStatus.Cancelled);
+
+        var payment = appointment.Payment;
+        payment.SessionCount = activeSessionCount;
+        payment.TotalAmount = payment.SessionCost * activeSessionCount;
+        payment.PendingAmount = payment.TotalAmount - payment.AmountPaid;
+        payment.SpecialistAmount = payment.TotalAmount * 0.5m;
+        payment.InstitutionAmount = payment.TotalAmount * 0.5m;
+
+        // Ajustar el monto pagado si excede el total actualizado
+        if (payment.AmountPaid > payment.TotalAmount)
+        {
+            payment.AmountPaid = payment.TotalAmount;
+            payment.PendingAmount = 0;
+            payment.Status = PaymentStatus.Completed;
+            payment.LastPaymentDate = payment.LastPaymentDate ?? DateTime.UtcNow;
+        }
+        else if (payment.AmountPaid < payment.TotalAmount)
+        {
+            payment.Status = PaymentStatus.Pending;
+        }
+
+        await _paymentRepository.UpdateAsync(payment);
+        return Result.Success();
+    }
+
+    public async Task<Payment?> GetPaymentByIdAsync(Guid id)
+    {
+        return await _paymentRepository.GetAll()
             .Include(p => p.Appointment)
             .Include(p => p.Patient)
             .Include(p => p.Specialist)
-            .FirstOrDefault(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id);
     }
 
-    // public override IEnumerable<Payment> ListAll()
-    // {
-    //     var query = _paymentRepository.GetAll();
-    //     query = query.Include(p => p.Appointment);
-    //     query = query.Include(p => p.Patient);
-    //     query = query.Include(p => p.Specialist);
-
-    //     return query.ToList();
-    // }
-
-    public IEnumerable<Payment> ListAll(Guid? specialistId = null)
+    public async Task<(IEnumerable<Payment>, int)> GetPaymentsAsync(PaginationParams pagination)
     {
-        var query = _paymentRepository.GetAll();
-        if (specialistId.HasValue)
-            query = query.Where(p => p.SpecialistId == specialistId.Value);
-
-        return query
-            .Include(p => p.Appointment)
-            .Include(p => p.Patient)
-            .Include(p => p.Specialist)
-            .ToList();
-    }
-
-    // public override async Task<(IEnumerable<Payment> Items, int TotalCount)> GetPagedAsync(PaginationParams pagination)
-    // {
-    //     var query = _paymentRepository.GetAll();
-    //     query = query.Include(p => p.Appointment);
-    //     query = query.Include(p => p.Patient);
-    //     query = query.Include(p => p.Specialist);
-
-    //     var totalCount = await query.CountAsync();
-    //     var items = await query
-    //         .Skip((pagination.PageNumber - 1) * pagination.PageSize)
-    //         .Take(pagination.PageSize)
-    //         .ToListAsync();
-    //     return (items, totalCount);
-    // }
-
-    public async Task<(IEnumerable<Payment> Items, int TotalCount)> GetPagedAsync(PaginationParams pagination, Guid? specialistId = null)
-    {
-        var query = _paymentRepository.GetAll();
-        if (specialistId.HasValue)
-            query = query.Where(p => p.SpecialistId == specialistId.Value);
-
-        query = query
+        var query = _paymentRepository.GetAll()
             .Include(p => p.Appointment)
             .Include(p => p.Patient)
             .Include(p => p.Specialist);
@@ -108,16 +136,7 @@ public class PaymentService : BaseService<Payment, PaymentDto>
             .Skip((pagination.PageNumber - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
             .ToListAsync();
+
         return (items, totalCount);
-    }
-
-    protected override Payment MapToEntity(PaymentDto dto)
-    {
-        throw new NotImplementedException("Creación de pagos se maneja automáticamente con citas.");
-    }
-
-    protected override void UpdateEntity(Payment entity, PaymentDto dto)
-    {
-        throw new NotImplementedException("Actualización de pagos se maneja mediante UpdatePaymentAmount.");
     }
 }

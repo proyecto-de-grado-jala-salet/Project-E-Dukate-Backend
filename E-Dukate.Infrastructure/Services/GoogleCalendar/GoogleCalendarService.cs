@@ -49,12 +49,12 @@ public class GoogleCalendarService : IGoogleCalendarService
                     SpecialistId: {appointment.Specialist.Id}",
                 Start = new EventDateTime
                 {
-                    DateTime = appointment.StartTime,
+                    // DateTime = appointment.StartTime,
                     TimeZone = "America/La_Paz"
                 },
                 End = new EventDateTime
                 {
-                    DateTime = appointment.EndTime,
+                    // DateTime = appointment.EndTime,
                     TimeZone = "America/La_Paz"
                 }
             };
