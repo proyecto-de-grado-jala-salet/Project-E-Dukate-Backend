@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace E_Dukate.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250530061231_InitialCreate")]
+    [Migration("20250614034429_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -31,9 +31,6 @@ namespace E_Dukate.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("EndTime")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uuid");
 
@@ -49,12 +46,6 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.Property<Guid>("SpecialtyId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("StartTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("Status")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
 
                     b.HasIndex("PatientId");
@@ -64,6 +55,34 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.HasIndex("SpecialtyId");
 
                     b.ToTable("Appointments", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Appointments.ScheduledSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AppointmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("SessionDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TimeSlotId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppointmentId");
+
+                    b.HasIndex("TimeSlotId");
+
+                    b.ToTable("ScheduledSessions", (string)null);
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.Auth.LoginLog", b =>
@@ -208,7 +227,7 @@ namespace E_Dukate.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("AmountPaid")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<Guid>("AppointmentId")
                         .HasColumnType("uuid");
@@ -217,7 +236,7 @@ namespace E_Dukate.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("InstitutionAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<DateTime?>("LastPaymentDate")
                         .HasColumnType("timestamp with time zone");
@@ -226,25 +245,26 @@ namespace E_Dukate.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("PendingAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal>("SessionCost")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<int>("SessionCount")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("SpecialistAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<Guid>("SpecialistId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric");
 
                     b.HasKey("Id");
 
@@ -500,6 +520,25 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.Navigation("Specialty");
                 });
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Appointments.ScheduledSession", b =>
+                {
+                    b.HasOne("E_Dukate.Domain.Entities.Appointments.Appointment", "Appointment")
+                        .WithMany("ScheduledSessions")
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("E_Dukate.Domain.Entities.Schedules.TimeSlot", "TimeSlot")
+                        .WithMany()
+                        .HasForeignKey("TimeSlotId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Appointment");
+
+                    b.Navigation("TimeSlot");
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalConsultation", b =>
                 {
                     b.HasOne("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistoryPermission", "Permission")
@@ -612,6 +651,8 @@ namespace E_Dukate.Infrastructure.Migrations
             modelBuilder.Entity("E_Dukate.Domain.Entities.Appointments.Appointment", b =>
                 {
                     b.Navigation("Payment");
+
+                    b.Navigation("ScheduledSessions");
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistory", b =>

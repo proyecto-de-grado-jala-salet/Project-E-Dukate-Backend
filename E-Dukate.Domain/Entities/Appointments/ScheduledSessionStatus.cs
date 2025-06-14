@@ -1,9 +1,9 @@
 namespace E_Dukate.Domain.Entities.Appointments;
 
-public enum AppointmentStatus
+public enum ScheduledSessionStatus
 {
     Scheduled,
-    Completed,
+    Confirmed,
     Cancelled,
-    NoShow
+    Rescheduled
 }

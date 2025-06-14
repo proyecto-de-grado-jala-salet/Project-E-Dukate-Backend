@@ -66,6 +66,7 @@ public static class DependencyInjection
         services.AddScoped<IGenericRepository<MedicalHistoryPermission>, GenericRepository<MedicalHistoryPermission>>();
         services.AddScoped<IGenericRepository<MedicalConsultation>, GenericRepository<MedicalConsultation>>();
         services.AddScoped<IGenericRepository<Appointment>, GenericRepository<Appointment>>();
+        services.AddScoped<IGenericRepository<ScheduledSession>, GenericRepository<ScheduledSession>>();
         services.AddScoped<IGenericRepository<Payment>, GenericRepository<Payment>>();
         services.AddScoped<IGenericRepository<Specialist>, GenericRepository<Specialist>>();
         return services;

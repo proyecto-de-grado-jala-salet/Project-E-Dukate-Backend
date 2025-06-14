@@ -1,68 +1,38 @@
 using Microsoft.AspNetCore.Mvc;
 using E_Dukate.Application.Services.Appointments;
 using E_Dukate.Application.DTOs.Appointments;
-using E_Dukate.Domain.Entities.Appointments;
 using E_Dukate.Application.DTOs.Common;
-using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
-using E_Dukate.Domain.Entities.Schedules;
 
 namespace E_Dukate.Presentation.Controllers.Appointments;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
-public class AppointmentsController : BaseController<Appointment, AppointmentDto>
+public class AppointmentsController : ControllerBase
 {
     private readonly AppointmentService _appointmentService;
 
-    public AppointmentsController(AppointmentService service) : base(service)
+    public AppointmentsController(AppointmentService appointmentService)
     {
-        _appointmentService = service;
+        _appointmentService = appointmentService;
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrator,Specialist")]
-    public override IActionResult Add([FromBody] AppointmentDto dto)
+    public async Task<IActionResult> Create([FromBody] AppointmentDto dto)
     {
-        if (User.IsInRole("Specialist"))
-        {
-            var userId = Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? string.Empty);
-            if (dto.SpecialistId != userId)
-                return Unauthorized("No tienes permiso para crear una cita para otro especialista.");
-        }
-
-        var result = _appointmentService.Register(dto);
+        var result = await _appointmentService.CreateAppointmentAsync(dto);
         if (!result.IsSuccess)
             return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
 
-        // Obtener la cita recién creada para devolverla en la respuesta
-        var appointment = _appointmentService.ListAll(dto.SpecialistId)
-            .OrderByDescending(a => a.StartTime ?? DateTime.MinValue)
-            .FirstOrDefault();
-        return CreatedAtAction(nameof(GetById), new { id = appointment.Id }, MapToResponse(appointment));
+        return CreatedAtAction(nameof(GetById), new { id = Guid.NewGuid() }, dto);
     }
 
     [HttpPut("{id}")]
-    [Authorize(Roles = "Administrator,Specialist")]
-    public override IActionResult Update(Guid id, [FromBody] AppointmentDto dto)
+    public async Task<IActionResult> Update(Guid id, [FromBody] AppointmentDto dto)
     {
-        var appointment = _appointmentService.FindById(id);
-        if (appointment == null)
-            return NotFound("Cita no encontrada.");
-
-        if (User.IsInRole("Specialist"))
-        {
-            var userId = Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? string.Empty);
-            if (appointment.SpecialistId != userId)
-                return Unauthorized("No tienes permiso para modificar esta cita.");
-        }
-
-        var result = _appointmentService.Update(id, dto);
+        var result = await _appointmentService.UpdateAppointmentAsync(id, dto);
         if (!result.IsSuccess)
         {
-            if (result.ErrorMessage.Contains("no encontrada") || result.ErrorMessage.Contains("no encontrado"))
+            if (result.ErrorMessage.Contains("no encontrada"))
                 return NotFound(new { Error = result.ErrorMessage });
             return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
         }
@@ -71,65 +41,32 @@ public class AppointmentsController : BaseController<Appointment, AppointmentDto
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Administrator,Specialist")]
-    public override IActionResult Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id)
     {
-        var appointment = _appointmentService.FindById(id);
-        if (appointment == null)
-            return NotFound("Cita no encontrada.");
+        var result = await _appointmentService.DeleteAppointmentAsync(id);
+        if (!result.IsSuccess)
+            return NotFound(new { Error = result.ErrorMessage });
 
-        if (User.IsInRole("Specialist"))
-        {
-            var userId = Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? string.Empty);
-            if (appointment.SpecialistId != userId)
-                return Unauthorized("No tienes permiso para eliminar esta cita.");
-        }
-
-        try
-        {
-            _appointmentService.Delete(id);
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { Error = ex.Message });
-        }
+        return NoContent();
     }
 
     [HttpGet("{id}")]
-    [Authorize(Roles = "Administrator,Specialist")]
-    public override IActionResult GetById(Guid id)
+    public async Task<IActionResult> GetById(Guid id)
     {
-        var appointment = _appointmentService.FindById(id);
+        var appointment = await _appointmentService.GetAppointmentByIdAsync(id);
         if (appointment == null)
             return NotFound();
 
-        if (User.IsInRole("Specialist"))
-        {
-            var userId = Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? string.Empty);
-            if (appointment.SpecialistId != userId)
-                return Unauthorized("No tienes permiso para ver esta cita.");
-        }
-
-        return Ok(MapToResponse(appointment));
+        return Ok(appointment);
     }
 
     [HttpGet]
-    [Authorize(Roles = "Administrator,Specialist")]
-    public override async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
+    public async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
     {
-        Guid? specialistId = null;
-        if (User.IsInRole("Specialist"))
-        {
-            specialistId = Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? string.Empty);
-        }
-
-        var (items, totalCount) = await _appointmentService.GetPagedAsync(pagination, specialistId);
-        var response = items.Select(MapToResponse);
-
+        var (items, totalCount) = await _appointmentService.GetAppointmentsAsync(pagination);
         return Ok(new
         {
-            Items = response,
+            Items = items,
             TotalCount = totalCount,
             PageNumber = pagination.PageNumber,
             PageSize = pagination.PageSize,
@@ -137,49 +74,33 @@ public class AppointmentsController : BaseController<Appointment, AppointmentDto
         });
     }
 
-    // Método auxiliar para mapear Appointment a la respuesta
-    private object MapToResponse(Appointment appointment)
+    [HttpPost("{id}/sessions/{sessionId}/confirm")]
+    public async Task<IActionResult> ConfirmSession(Guid id, Guid sessionId, [FromQuery] Guid patientId)
     {
-        return new
-        {
-            appointment.Id,
-            Patient = new
-            {
-                appointment.Patient.Id,
-                appointment.Patient.Names,
-                appointment.Patient.LastNamePaternal,
-                appointment.Patient.LastNameMaternal
-            },
-            Specialist = new
-            {
-                appointment.Specialist.Id,
-                appointment.Specialist.Names,
-                appointment.Specialist.LastNamePaternal,
-                appointment.Specialist.LastNameMaternal
-            },
-            Specialty = new
-            {
-                appointment.Specialty.Id,
-                appointment.Specialty.TypeOfSpecialty
-            },
-            appointment.StartTime,
-            appointment.EndTime,
-            appointment.SessionCount,
-            appointment.Status,
-            Payment = appointment.Payment != null ? new
-            {
-                appointment.Payment.Id,
-                appointment.Payment.SessionCost,
-                appointment.Payment.SessionCount,
-                appointment.Payment.TotalAmount,
-                appointment.Payment.AmountPaid,
-                appointment.Payment.PendingAmount,
-                appointment.Payment.SpecialistAmount,
-                appointment.Payment.InstitutionAmount,
-                appointment.Payment.FirstPaymentDate,
-                appointment.Payment.LastPaymentDate,
-                appointment.Payment.Status
-            } : null
-        };
+        var result = await _appointmentService.ConfirmSessionAsync(sessionId, patientId);
+        if (!result.IsSuccess)
+            return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
+
+        return Ok();
+    }
+
+    [HttpPost("{id}/sessions/{sessionId}/cancel")]
+    public async Task<IActionResult> CancelSession(Guid id, Guid sessionId, [FromQuery] Guid patientId)
+    {
+        var result = await _appointmentService.CancelSessionAsync(sessionId, patientId);
+        if (!result.IsSuccess)
+            return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
+
+        return Ok();
+    }
+
+    [HttpPost("{id}/sessions/{sessionId}/reschedule")]
+    public async Task<IActionResult> RescheduleSession(Guid id, Guid sessionId, [FromQuery] Guid patientId, [FromBody] ScheduledSessionDto dto)
+    {
+        var result = await _appointmentService.RescheduleSessionAsync(sessionId, patientId, dto);
+        if (!result.IsSuccess)
+            return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
+
+        return Ok();
     }
 }
