@@ -58,40 +58,92 @@ public class AppointmentService
 
         var patient = await _patientRepository.GetByIdAsync(dto.PatientId);
         if (patient == null)
-            return Result.Failure("Paciente no encontrado.");
+            return Result.Failure("Patient not found.");
 
         var specialty = await _specialtyRepository.GetByIdAsync(dto.SpecialtyId);
         if (specialty == null)
-            return Result.Failure("Especialidad no encontrada.");
+            return Result.Failure("Specialty not found.");
 
         var specialist = await _specialistRepository.GetByIdAsync(dto.SpecialistId);
         if (specialist == null)
-            return Result.Failure("Especialista no encontrado.");
+            return Result.Failure("Specialist not found.");
 
         var schedules = await _scheduleRepository.GetAll()
             .Include(s => s.TimeSlots)
             .Where(s => s.SpecialistId == dto.SpecialistId && s.Attends)
             .ToListAsync();
 
+        var scheduledSessions = new List<ScheduledSession>();
+        var currentDate = DateTime.UtcNow.Date;
+        var sessionsAssigned = 0;
+
+        var sessionsPerSlot = dto.ScheduledSessions.Count > 0
+            ? (int)Math.Ceiling((double)dto.SessionCount / dto.ScheduledSessions.Count)
+            : 0;
+
         foreach (var sessionDto in dto.ScheduledSessions)
         {
-            if (!Enum.TryParse<ScheduledSessionStatus>(sessionDto.Status, true, out _))
-                return Result.Failure($"Estado de sesión inválido: {sessionDto.Status}.");
+            if (!Enum.TryParse<DayOfWeek>(sessionDto.DayOfWeek, true, out var dayOfWeek))
+                return Result.Failure($"Invalid day of the week: {sessionDto.DayOfWeek}.");
 
-            var timeSlot = await _timeSlotRepository.GetByIdAsync(sessionDto.TimeSlotId);
+            if (!TimeOnly.TryParse(sessionDto.StartTime, out var startTime) ||
+                !TimeOnly.TryParse(sessionDto.EndTime, out var endTime))
+                return Result.Failure($"Invalid time format: {sessionDto.StartTime} - {sessionDto.EndTime}.");
+
+            var timeSlot = await _timeSlotRepository.GetAll()
+                .FirstOrDefaultAsync(ts => ts.Id == sessionDto.TimeSlotId &&
+                                           ts.StartTime == startTime &&
+                                           ts.EndTime == endTime);
             if (timeSlot == null)
-                return Result.Failure($"Horario no encontrado para la sesión en {sessionDto.SessionDateTime}.");
+                return Result.Failure($"Schedule not found: {sessionDto.StartTime} - {sessionDto.EndTime}.");
 
-            var schedule = schedules.FirstOrDefault(s => s.Id == timeSlot.ScheduleId);
-            if (schedule == null || schedule.DayOfWeek != sessionDto.SessionDateTime.DayOfWeek)
-                return Result.Failure($"El horario seleccionado no corresponde al día {sessionDto.SessionDateTime.DayOfWeek}.");
+            var schedule = schedules.FirstOrDefault(s => s.Id == timeSlot.ScheduleId && s.DayOfWeek == dayOfWeek);
+            if (schedule == null)
+                return Result.Failure($"The schedule is not available for {sessionDto.DayOfWeek}.");
+            
+            var daysUntilNext = ((int)dayOfWeek - (int)currentDate.DayOfWeek + 7) % 7;
+            if (daysUntilNext == 0 && TimeOnly.FromDateTime(DateTime.UtcNow) > startTime)
+                daysUntilNext = 7;
 
-            var existingSession = await _scheduledSessionRepository.GetAll()
-                .AnyAsync(ss => ss.TimeSlotId == sessionDto.TimeSlotId &&
-                                ss.SessionDateTime.Date == sessionDto.SessionDateTime.Date);
-            if (existingSession)
-                return Result.Failure($"El horario {sessionDto.SessionDateTime} ya está ocupado.");
+            var sessionDate = currentDate.AddDays(daysUntilNext);
+            var sessionsToAssign = Math.Min(sessionsPerSlot, dto.SessionCount - sessionsAssigned);
+            var maxAttempts = 10;
+
+            for (int i = 0; i < sessionsToAssign && sessionsAssigned < dto.SessionCount && maxAttempts > 0; i++)
+            {
+                var startSessionDateTime = sessionDate.Add(startTime.ToTimeSpan());
+                var endSessionDateTime = sessionDate.Add(endTime.ToTimeSpan());
+                var isOccupied = await _scheduledSessionRepository.GetAll()
+                    .AnyAsync(ss => ss.TimeSlotId == sessionDto.TimeSlotId &&
+                                    ss.StartSessionDateTime.Date == sessionDate &&
+                                    ss.StartSessionDateTime.Hour == startTime.Hour &&
+                                    ss.StartSessionDateTime.Minute == startTime.Minute);
+                if (!isOccupied)
+                {
+                    scheduledSessions.Add(new ScheduledSession
+                    {
+                        TimeSlotId = sessionDto.TimeSlotId,
+                        StartSessionDateTime = startSessionDateTime,
+                        EndSessionDateTime = endSessionDateTime,
+                        Status = Enum.Parse<ScheduledSessionStatus>(sessionDto.Status, true)
+                    });
+                    sessionsAssigned++;
+                    sessionDate = sessionDate.AddDays(7);
+                }
+                else
+                {
+                    sessionDate = sessionDate.AddDays(7);
+                    i--;
+                    maxAttempts--;
+                }
+            }
+
+            if (maxAttempts == 0)
+                return Result.Failure($"No dates were found available for {sessionDto.DayOfWeek} at the requested time.");
         }
+
+        if (sessionsAssigned < dto.SessionCount)
+            return Result.Failure("Not all requested sessions could be scheduled due to scheduling conflicts.");
 
         var appointment = new Appointment
         {
@@ -102,16 +154,9 @@ public class AppointmentService
             SpecialistId = dto.SpecialistId,
             Specialist = specialist,
             SessionCount = dto.SessionCount,
-            ScheduledSessions = dto.ScheduledSessions.Select(ss => new ScheduledSession
-            {
-                TimeSlotId = ss.TimeSlotId,
-                SessionDateTime = ss.SessionDateTime,
-                Status = Enum.Parse<ScheduledSessionStatus>(ss.Status, true)
-            }).ToList()
+            ScheduledSessions = scheduledSessions
         };
 
-        // Crear el Payment automáticamente
-        const decimal defaultSessionCost = 65.0m; // 65 bs por sesión
         var payment = new Payment
         {
             Appointment = appointment,
@@ -119,13 +164,13 @@ public class AppointmentService
             Patient = patient,
             SpecialistId = dto.SpecialistId,
             Specialist = specialist,
-            SessionCost = defaultSessionCost,
+            SessionCost = dto.SessionCost > 0 ? dto.SessionCost : 65.0m,
             SessionCount = dto.SessionCount,
-            TotalAmount = defaultSessionCost * dto.SessionCount,
-            AmountPaid = 0, // Inicialmente sin pago
-            PendingAmount = defaultSessionCost * dto.SessionCount,
-            SpecialistAmount = (defaultSessionCost * dto.SessionCount) * 0.5m,
-            InstitutionAmount = (defaultSessionCost * dto.SessionCount) * 0.5m,
+            TotalAmount = (dto.SessionCost > 0 ? dto.SessionCost : 65.0m) * dto.SessionCount,
+            AmountPaid = 0,
+            PendingAmount = (dto.SessionCost > 0 ? dto.SessionCost : 65.0m) * dto.SessionCount,
+            SpecialistAmount = ((dto.SessionCost > 0 ? dto.SessionCost : 65.0m) * dto.SessionCount) * 0.5m,
+            InstitutionAmount = ((dto.SessionCost > 0 ? dto.SessionCost : 65.0m) * dto.SessionCount) * 0.5m,
             FirstPaymentDate = null,
             LastPaymentDate = null,
             Status = PaymentStatus.Pending
@@ -135,7 +180,6 @@ public class AppointmentService
         appointment.PaymentId = payment.Id;
 
         await _appointmentRepository.AddAsync(appointment);
-        await _paymentRepository.AddAsync(payment);
 
         return Result.Success();
     }
@@ -151,53 +195,103 @@ public class AppointmentService
             .Include(a => a.Payment)
             .FirstOrDefaultAsync(a => a.Id == id);
         if (appointment == null)
-            return Result.Failure("Cita no encontrada.");
+            return Result.Failure("Appointment not found.");
 
         var patient = await _patientRepository.GetByIdAsync(dto.PatientId);
         if (patient == null)
-            return Result.Failure("Paciente no encontrado.");
+            return Result.Failure("Patient not found.");
 
         var specialty = await _specialtyRepository.GetByIdAsync(dto.SpecialtyId);
         if (specialty == null)
-            return Result.Failure("Especialidad no encontrada.");
+            return Result.Failure("Specialty not found.");
 
         var specialist = await _specialistRepository.GetByIdAsync(dto.SpecialistId);
         if (specialist == null)
-            return Result.Failure("Especialista no encontrado.");
+            return Result.Failure("Specialist not found.");
 
         var schedules = await _scheduleRepository.GetAll()
             .Include(s => s.TimeSlots)
             .Where(s => s.SpecialistId == dto.SpecialistId && s.Attends)
             .ToListAsync();
 
+        var scheduledSessions = new List<ScheduledSession>();
+        var currentDate = DateTime.UtcNow.Date;
+        var sessionsAssigned = 0;
+
+        var sessionsPerSlot = dto.ScheduledSessions.Count > 0
+            ? (int)Math.Ceiling((double)dto.SessionCount / dto.ScheduledSessions.Count)
+            : 0;
+
         foreach (var sessionDto in dto.ScheduledSessions)
         {
-            if (!Enum.TryParse<ScheduledSessionStatus>(sessionDto.Status, true, out _))
-                return Result.Failure($"Estado de sesión inválido: {sessionDto.Status}.");
+            if (!Enum.TryParse<DayOfWeek>(sessionDto.DayOfWeek, true, out var dayOfWeek))
+                return Result.Failure($"Invalid day of the week: {sessionDto.DayOfWeek}.");
 
-            var timeSlot = await _timeSlotRepository.GetByIdAsync(sessionDto.TimeSlotId);
+            if (!TimeOnly.TryParse(sessionDto.StartTime, out var startTime) ||
+                !TimeOnly.TryParse(sessionDto.EndTime, out var endTime))
+                return Result.Failure($"Invalid time format: {sessionDto.StartTime} - {sessionDto.EndTime}.");
+
+            var timeSlot = await _timeSlotRepository.GetAll()
+                .FirstOrDefaultAsync(ts => ts.Id == sessionDto.TimeSlotId &&
+                                           ts.StartTime == startTime &&
+                                           ts.EndTime == endTime);
             if (timeSlot == null)
-                return Result.Failure($"Horario no encontrado para la sesión en {sessionDto.SessionDateTime}.");
+                return Result.Failure($"Schedule not found: {sessionDto.StartTime} - {sessionDto.EndTime}.");
 
-            var schedule = schedules.FirstOrDefault(s => s.Id == timeSlot.ScheduleId);
-            if (schedule == null || schedule.DayOfWeek != sessionDto.SessionDateTime.DayOfWeek)
-                return Result.Failure($"El horario seleccionado no corresponde al día {sessionDto.SessionDateTime.DayOfWeek}.");
+            var schedule = schedules.FirstOrDefault(s => s.Id == timeSlot.ScheduleId && s.DayOfWeek == dayOfWeek);
+            if (schedule == null)
+                return Result.Failure($"The schedule is not available for {sessionDto.DayOfWeek}.");
 
-            var existingSession = await _scheduledSessionRepository.GetAll()
-                .AnyAsync(ss => ss.TimeSlotId == sessionDto.TimeSlotId &&
-                                ss.SessionDateTime.Date == sessionDto.SessionDateTime.Date &&
-                                ss.AppointmentId != id);
-            if (existingSession)
-                return Result.Failure($"El horario {sessionDto.SessionDateTime} ya está ocupado.");
+            var daysUntilNext = ((int)dayOfWeek - (int)currentDate.DayOfWeek + 7) % 7;
+            if (daysUntilNext == 0 && TimeOnly.FromDateTime(DateTime.UtcNow) > startTime)
+                daysUntilNext = 7;
+
+            var sessionDate = currentDate.AddDays(daysUntilNext);
+            var sessionsToAssign = Math.Min(sessionsPerSlot, dto.SessionCount - sessionsAssigned);
+            var maxAttempts = 10;
+
+            for (int i = 0; i < sessionsToAssign && sessionsAssigned < dto.SessionCount && maxAttempts > 0; i++)
+            {
+                var startSessionDateTime = sessionDate.Add(startTime.ToTimeSpan());
+                var endSessionDateTime = sessionDate.Add(endTime.ToTimeSpan());
+                var isOccupied = await _scheduledSessionRepository.GetAll()
+                    .AnyAsync(ss => ss.TimeSlotId == sessionDto.TimeSlotId &&
+                                    ss.StartSessionDateTime.Date == sessionDate &&
+                                    ss.StartSessionDateTime.Hour == startTime.Hour &&
+                                    ss.StartSessionDateTime.Minute == startTime.Minute &&
+                                    ss.AppointmentId != id);
+                if (!isOccupied)
+                {
+                    scheduledSessions.Add(new ScheduledSession
+                    {
+                        TimeSlotId = sessionDto.TimeSlotId,
+                        StartSessionDateTime = startSessionDateTime,
+                        EndSessionDateTime = endSessionDateTime,
+                        Status = Enum.Parse<ScheduledSessionStatus>(sessionDto.Status, true)
+                    });
+                    sessionsAssigned++;
+                    sessionDate = sessionDate.AddDays(7);
+                }
+                else
+                {
+                    sessionDate = sessionDate.AddDays(7);
+                    i--;
+                    maxAttempts--;
+                }
+            }
+
+            if (maxAttempts == 0)
+                return Result.Failure($"No dates were found available for {sessionDto.DayOfWeek} at the requested time.");
         }
 
-        // Eliminar sesiones existentes
+        if (sessionsAssigned < dto.SessionCount)
+            return Result.Failure("Not all requested sessions could be scheduled due to scheduling conflicts.");
+        
         foreach (var session in appointment.ScheduledSessions.ToList())
         {
             await _scheduledSessionRepository.DeleteAsync(session.Id);
         }
 
-        // Actualizar cita
         appointment.PatientId = dto.PatientId;
         appointment.Patient = patient;
         appointment.SpecialtyId = dto.SpecialtyId;
@@ -205,18 +299,13 @@ public class AppointmentService
         appointment.SpecialistId = dto.SpecialistId;
         appointment.Specialist = specialist;
         appointment.SessionCount = dto.SessionCount;
-        appointment.ScheduledSessions = dto.ScheduledSessions.Select(ss => new ScheduledSession
-        {
-            TimeSlotId = ss.TimeSlotId,
-            SessionDateTime = ss.SessionDateTime,
-            Status = Enum.Parse<ScheduledSessionStatus>(ss.Status, true)
-        }).ToList();
+        appointment.ScheduledSessions = scheduledSessions;
 
-        // Actualizar el Payment asociado
         if (appointment.Payment != null)
         {
             appointment.Payment.SessionCount = dto.SessionCount;
-            appointment.Payment.TotalAmount = appointment.Payment.SessionCost * dto.SessionCount;
+            appointment.Payment.SessionCost = dto.SessionCost > 0 ? dto.SessionCost : 65.0m;
+            appointment.Payment.TotalAmount = (dto.SessionCost > 0 ? dto.SessionCost : 65.0m) * dto.SessionCount;
             appointment.Payment.PendingAmount = appointment.Payment.TotalAmount - appointment.Payment.AmountPaid;
             appointment.Payment.SpecialistAmount = appointment.Payment.TotalAmount * 0.5m;
             appointment.Payment.InstitutionAmount = appointment.Payment.TotalAmount * 0.5m;
@@ -230,6 +319,7 @@ public class AppointmentService
             else
             {
                 appointment.Payment.Status = PaymentStatus.Pending;
+                appointment.Payment.LastPaymentDate = null;
             }
 
             await _paymentRepository.UpdateAsync(appointment.Payment);
@@ -246,7 +336,7 @@ public class AppointmentService
             .Include(a => a.Payment)
             .FirstOrDefaultAsync(a => a.Id == id);
         if (appointment == null)
-            return Result.Failure("Cita no encontrada.");
+            return Result.Failure("Appointment not found.");
 
         foreach (var session in appointment.ScheduledSessions)
         {
@@ -269,16 +359,16 @@ public class AppointmentService
     {
         var session = await _scheduledSessionRepository.GetAll()
             .Include(ss => ss.Appointment)
-            .ThenInclude(a => a.Patient)
+            .ThenInclude(a => a!.Patient)
             .FirstOrDefaultAsync(ss => ss.Id == sessionId);
         if (session == null)
-            return Result.Failure("Sesión no encontrada.");
+            return Result.Failure("Session not found.");
 
         if (session.AppointmentId != patientId)
-            return Result.Failure("No tienes permiso para confirmar esta sesión.");
+            return Result.Failure("You do not have permission to confirm this session.");
 
         if (session.Status == ScheduledSessionStatus.Cancelled)
-            return Result.Failure("No puedes confirmar una sesión cancelada.");
+            return Result.Failure("You cannot confirm a cancelled session.");
 
         session.Status = ScheduledSessionStatus.Confirmed;
         await _scheduledSessionRepository.UpdateAsync(session);
@@ -289,16 +379,16 @@ public class AppointmentService
     {
         var session = await _scheduledSessionRepository.GetAll()
             .Include(ss => ss.Appointment)
-            .ThenInclude(a => a.Patient)
+            .ThenInclude(a => a!.Patient)
             .FirstOrDefaultAsync(ss => ss.Id == sessionId);
         if (session == null)
-            return Result.Failure("Sesión no encontrada.");
+            return Result.Failure("Session not found.");
 
-        if (session.Appointment.PatientId != patientId)
-            return Result.Failure("No tienes permiso para cancelar esta sesión.");
+        if (session.Appointment!.PatientId != patientId)
+            return Result.Failure("You do not have permission to cancel this session.");
 
         if (session.Status == ScheduledSessionStatus.Cancelled)
-            return Result.Failure("La sesión ya está cancelada.");
+            return Result.Failure("The session is already cancelled.");
 
         session.Status = ScheduledSessionStatus.Cancelled;
         await _scheduledSessionRepository.UpdateAsync(session);
@@ -314,36 +404,58 @@ public class AppointmentService
     {
         var session = await _scheduledSessionRepository.GetAll()
             .Include(ss => ss.Appointment)
-            .ThenInclude(a => a.Specialist)
+            .ThenInclude(a => a!.Specialist)
             .FirstOrDefaultAsync(ss => ss.Id == sessionId);
         if (session == null)
-            return Result.Failure("Sesión no encontrada.");
+            return Result.Failure("Session not found.");
 
-        if (session.Appointment.PatientId != patientId)
-            return Result.Failure("No tienes permiso para reprogramar esta sesión.");
+        if (session.Appointment!.PatientId != patientId)
+            return Result.Failure("You do not have permission to reschedule this session.");
 
-        var timeSlot = await _timeSlotRepository.GetByIdAsync(dto.TimeSlotId);
+        if (!Enum.TryParse<DayOfWeek>(dto.DayOfWeek, true, out var dayOfWeek))
+            return Result.Failure($"Invalid day of the week: {dto.DayOfWeek}.");
+
+        if (!TimeOnly.TryParse(dto.StartTime, out var startTime) ||
+            !TimeOnly.TryParse(dto.EndTime, out var endTime))
+            return Result.Failure($"Invalid time format: {dto.StartTime} - {dto.EndTime}.");
+
+        var timeSlot = await _timeSlotRepository.GetAll()
+            .FirstOrDefaultAsync(ts => ts.Id == dto.TimeSlotId &&
+                                       ts.StartTime == startTime &&
+                                       ts.EndTime == endTime);
         if (timeSlot == null)
-            return Result.Failure($"Horario no encontrado para la sesión en {dto.SessionDateTime}.");
+            return Result.Failure($"Schedule not found: {dto.StartTime} - {dto.EndTime}.");
 
         var schedules = await _scheduleRepository.GetAll()
             .Include(s => s.TimeSlots)
             .Where(s => s.SpecialistId == session.Appointment.SpecialistId && s.Attends)
             .ToListAsync();
 
-        var schedule = schedules.FirstOrDefault(s => s.Id == timeSlot.ScheduleId);
-        if (schedule == null || schedule.DayOfWeek != dto.SessionDateTime.DayOfWeek)
-            return Result.Failure($"El horario seleccionado no corresponde al día {dto.SessionDateTime.DayOfWeek}.");
+        var schedule = schedules.FirstOrDefault(s => s.Id == timeSlot.ScheduleId && s.DayOfWeek == dayOfWeek);
+        if (schedule == null)
+            return Result.Failure($"The schedule is not available for {dto.DayOfWeek}.");
 
-        var existingSession = await _scheduledSessionRepository.GetAll()
+        var currentDate = DateTime.UtcNow.Date;
+        var daysUntilNext = ((int)dayOfWeek - (int)currentDate.DayOfWeek + 7) % 7;
+        if (daysUntilNext == 0 && TimeOnly.FromDateTime(DateTime.UtcNow) > startTime)
+            daysUntilNext = 7;
+
+        var sessionDate = currentDate.AddDays(daysUntilNext);
+        var startSessionDateTime = sessionDate.Add(startTime.ToTimeSpan());
+        var endSessionDateTime = sessionDate.Add(endTime.ToTimeSpan());
+
+        var isOccupied = await _scheduledSessionRepository.GetAll()
             .AnyAsync(ss => ss.TimeSlotId == dto.TimeSlotId &&
-                            ss.SessionDateTime.Date == dto.SessionDateTime.Date &&
+                            ss.StartSessionDateTime.Date == sessionDate &&
+                            ss.StartSessionDateTime.Hour == startTime.Hour &&
+                            ss.StartSessionDateTime.Minute == startTime.Minute &&
                             ss.Id != sessionId);
-        if (existingSession)
-            return Result.Failure($"El horario {dto.SessionDateTime} ya está ocupado.");
+        if (isOccupied)
+            return Result.Failure($"The schedule {startSessionDateTime} is already occupied.");
 
         session.TimeSlotId = dto.TimeSlotId;
-        session.SessionDateTime = dto.SessionDateTime;
+        session.StartSessionDateTime = startSessionDateTime;
+        session.EndSessionDateTime = endSessionDateTime;
         session.Status = ScheduledSessionStatus.Rescheduled;
         await _scheduledSessionRepository.UpdateAsync(session);
 
@@ -389,7 +501,8 @@ public class AppointmentService
             {
                 ss.Id,
                 ss.TimeSlotId,
-                ss.SessionDateTime,
+                ss.StartSessionDateTime,
+                ss.EndSessionDateTime,
                 Status = ss.Status.ToString()
             }),
             PaymentId = appointment.PaymentId,
@@ -423,7 +536,8 @@ public class AppointmentService
             {
                 ss.Id,
                 ss.TimeSlotId,
-                ss.SessionDateTime,
+                ss.StartSessionDateTime,
+                ss.EndSessionDateTime,
                 Status = ss.Status.ToString()
             }),
             a.PaymentId,
