@@ -8,21 +8,18 @@ public class ScheduleValidator : AbstractValidator<ScheduleDto>
     public ScheduleValidator()
     {
         RuleFor(x => x.DayOfWeek)
-            .NotEmpty().WithMessage("El día de la semana es obligatorio.")
-            .Must(BeValidDayOfWeek).WithMessage("Día de la semana inválido.");
-
-        RuleFor(x => x.ConsultationDuration)
-            .GreaterThan(0).WithMessage("La duración de la consulta debe ser mayor a 0 minutos.");
+            .NotEmpty().WithMessage("Day of week is required.")
+            .Must(BeValidDayOfWeek).WithMessage("Invalid day of week.");
 
         RuleForEach(x => x.TimeSlots).ChildRules(timeSlot =>
         {
             timeSlot.RuleFor(ts => ts.StartTime)
-                .NotEmpty().WithMessage("La hora de inicio es obligatoria.")
-                .Must(BeValidTime).WithMessage("Formato de hora de inicio inválido (use HH:mm).");
+                .NotEmpty().WithMessage("Start time is required.")
+                .Must(BeValidTime).WithMessage("Invalid start time format (use HH:mm).");
 
             timeSlot.RuleFor(ts => ts.EndTime)
-                .NotEmpty().WithMessage("La hora de fin es obligatoria.")
-                .Must(BeValidTime).WithMessage("Formato de hora de fin inválido (use HH:mm).");
+                .NotEmpty().WithMessage("End time is required.")
+                .Must(BeValidTime).WithMessage("Invalid end time format (use HH:mm).");
 
             timeSlot.RuleFor(ts => ts)
                 .Must(ts =>
@@ -35,7 +32,7 @@ public class ScheduleValidator : AbstractValidator<ScheduleDto>
 
         RuleFor(x => x.TimeSlots)
             .Must(BeNonOverlappingAndSequential)
-            .WithMessage("Los intervalos de tiempo deben ser secuenciales y no superponerse. Cada StartTime debe ser igual o posterior al EndTime anterior.");
+            .WithMessage("Time slots must be sequential and non-overlapping. Each StartTime must be after or equal to the previous EndTime.");
     }
 
     private bool BeValidDayOfWeek(string? dayOfWeek)
@@ -48,18 +45,6 @@ public class ScheduleValidator : AbstractValidator<ScheduleDto>
     {
         return !string.IsNullOrEmpty(time) &&
                TimeOnly.TryParse(time, out _);
-    }
-
-    private bool BeValidDuration(ScheduleDto dto, TimeSlotDto timeSlot)
-    {
-        if (!TimeOnly.TryParse(timeSlot.StartTime, out var startTime) ||
-            !TimeOnly.TryParse(timeSlot.EndTime, out var endTime))
-        {
-            return false;
-        }
-
-        var duration = endTime - startTime;
-        return duration.TotalMinutes == dto.ConsultationDuration;
     }
 
     private bool BeNonOverlappingAndSequential(IList<TimeSlotDto> timeSlots)
