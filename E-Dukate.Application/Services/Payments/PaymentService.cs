@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using E_Dukate.Application.DTOs.Payments;
 using E_Dukate.Application.DTOs.Common;
 using E_Dukate.Domain.Entities.Payments;
@@ -165,13 +161,11 @@ public class PaymentService
     {
         var query = _paymentRepository.GetAll();
 
-        // Aplicar inclusiones
         query = query
             .Include(p => p.Appointment)
             .Include(p => p.Patient)
             .Include(p => p.Specialist);
-
-        // Aplicar filtros
+        
         if (filter.SpecialistId.HasValue)
         {
             query = query.Where(p => p.SpecialistId == filter.SpecialistId.Value);
@@ -200,10 +194,8 @@ public class PaymentService
                                     (p.LastPaymentDate.HasValue && p.LastPaymentDate.Value.Day == filter.Day.Value));
         }
 
-        // Calcular el conteo total antes de la paginación
         var totalCount = await query.CountAsync();
-
-        // Aplicar ordenamiento y paginación
+        
         var items = await query
             .OrderByDescending(p => p.FirstPaymentDate ?? p.LastPaymentDate ?? DateTime.MaxValue)
             .Skip((filter.PageNumber - 1) * filter.PageSize)
