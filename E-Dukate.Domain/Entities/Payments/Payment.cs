@@ -6,7 +6,6 @@ namespace E_Dukate.Domain.Entities.Payments;
 
 public class Payment : Entity
 {
-    // Relaciones
     public Guid AppointmentId { get; set; }
     public Appointment? Appointment { get; set; }
 
@@ -15,20 +14,14 @@ public class Payment : Entity
 
     public Guid SpecialistId { get; set; }
     public Specialist? Specialist { get; set; }
-
-    // Información de pago
-    public decimal SessionCost { get; set; } // Costo por sesión (65 bs)
-    public int SessionCount { get; set; } // Número de sesiones
-    public decimal TotalAmount { get; set; } // Total a pagar (SessionCost * SessionCount)
-    public decimal AmountPaid { get; set; } // Monto pagado hasta ahora
-    public decimal PendingAmount { get; set; } // Saldo pendiente (TotalAmount - AmountPaid)
-    public decimal SpecialistAmount { get; set; } // 50% para especialista
-    public decimal InstitutionAmount { get; set; } // 50% para institución
-
-    // Fechas de pago
-    public DateTime? FirstPaymentDate { get; set; } // Fecha del primer pago
-    public DateTime? LastPaymentDate { get; set; } // Fecha del último pago
-
-    // Estado y tipo de pago
+    public decimal SessionCost { get; set; }
+    public int SessionCount { get; set; }
+    public decimal TotalAmount { get; set; }
+    public decimal AmountPaid { get; set; }
+    public decimal PendingAmount { get; set; }
+    public decimal SpecialistAmount { get; set; }
+    public decimal InstitutionAmount { get; set; }
+    public DateTime? FirstPaymentDate { get; set; }
+    public DateTime? LastPaymentDate { get; set; }
     public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 }
