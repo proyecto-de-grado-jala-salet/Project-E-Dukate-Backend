@@ -46,7 +46,7 @@ public abstract class BaseController<T, TDto> : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public IActionResult Delete(Guid id)
+    public virtual IActionResult Delete(Guid id)
     {
         Service.Delete(id);
         return NoContent();

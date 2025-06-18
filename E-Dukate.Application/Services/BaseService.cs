@@ -43,18 +43,18 @@ public abstract class BaseService<T, TDto> where T : Entity where TDto : class
         return Result.Success();
     }
 
-    public void Delete(Guid id)
+    public virtual void Delete(Guid id)
     {
         var entity = Repository.GetById(id);
         if (entity == null) throw new Exception($"{typeof(T).Name} not found.");
         Repository.Delete(id);
     }
 
-    public T? FindById(Guid id) => Repository.GetById(id);
+    public virtual T? FindById(Guid id) => Repository.GetById(id);
 
-    public IEnumerable<T> ListAll() => Repository.GetAll();
+    public virtual IEnumerable<T> ListAll() => Repository.GetAll().ToList();
 
-    public async Task<(IEnumerable<T> Items, int TotalCount)> GetPagedAsync(PaginationParams pagination)
+    public virtual async Task<(IEnumerable<T> Items, int TotalCount)> GetPagedAsync(PaginationParams pagination)
     {
         var query = Repository.GetAll();
         var totalCount = await query.CountAsync();
