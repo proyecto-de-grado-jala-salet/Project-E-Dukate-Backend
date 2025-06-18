@@ -48,12 +48,12 @@ public class GoogleCalendarService : IGoogleCalendarService
                 Dirección: {appointment.Patient.Address}",
                 Start = new EventDateTime
                 {
-                    DateTimeDateTimeOffset = new DateTimeOffset(appointment.StartTime, TimeSpan.FromHours(-4)),
+                    // DateTime = appointment.StartTime,
                     TimeZone = "America/La_Paz"
                 },
                 End = new EventDateTime
                 {
-                    DateTimeDateTimeOffset = new DateTimeOffset(appointment.EndTime, TimeSpan.FromHours(-4)),
+                    // DateTime = appointment.EndTime,
                     TimeZone = "America/La_Paz"
                 }
             };
