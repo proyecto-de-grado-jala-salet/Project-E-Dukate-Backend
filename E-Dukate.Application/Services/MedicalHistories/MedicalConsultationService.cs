@@ -209,9 +209,21 @@ public class MedicalConsultationService : BaseService<MedicalConsultation, Updat
         {
             return ValueResult<object>.Failure("The permit does not exist or does not match the history and specialist.");
         }
-        
-        var query = Repository.GetAll().Where(c => c.PermissionId == permissionId);
-        var (items, totalCount) = await GetPagedAsync(pagination);
+
+        var query = Repository.GetAll()
+            .Include(c => c.Permission)
+            .Where(c => 
+                c.PermissionId == permissionId &&
+                c.SpecialistId == specialistId &&
+                c.Permission!.MedicalHistoryId == medicalHistoryId);
+
+        var skip = (pagination.PageNumber - 1) * pagination.PageSize;
+        var items = await query
+            .Skip(skip)
+            .Take(pagination.PageSize)
+            .AsNoTracking()
+            .ToListAsync();
+        var totalCount = await query.CountAsync();
 
         var consultations = items.Select(c => new
         {
