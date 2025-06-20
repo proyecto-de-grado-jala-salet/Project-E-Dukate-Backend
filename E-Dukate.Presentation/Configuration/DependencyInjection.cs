@@ -100,6 +100,7 @@ public static class DependencyInjection
         services.AddScoped<AppointmentService>();
         services.AddScoped<PaymentService>();
         services.AddScoped<MedicalHistoryMetricsService>();
+        services.AddScoped<DemographicMetricsService>();
         services.AddSingleton<IConversationStateManager, ConversationStateManager>();
         return services;
     }
