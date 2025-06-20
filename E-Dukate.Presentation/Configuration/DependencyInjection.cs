@@ -37,6 +37,7 @@ using E_Dukate.Application.DTOs.Appointments;
 using E_Dukate.Application.DTOs.Payments;
 using E_Dukate.Application.Validators.Appointments;
 using E_Dukate.Application.Validators.Payments;
+using E_Dukate.Application.Services.Metrics;
 
 namespace E_Dukate.Presentation.Configuration;
 
@@ -98,6 +99,7 @@ public static class DependencyInjection
         services.AddScoped<ShowSchedulesHandler>();
         services.AddScoped<AppointmentService>();
         services.AddScoped<PaymentService>();
+        services.AddScoped<MedicalHistoryMetricsService>();
         services.AddSingleton<IConversationStateManager, ConversationStateManager>();
         return services;
     }
