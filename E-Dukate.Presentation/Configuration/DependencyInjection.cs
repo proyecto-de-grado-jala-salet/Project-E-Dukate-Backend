@@ -101,6 +101,7 @@ public static class DependencyInjection
         services.AddScoped<PaymentService>();
         services.AddScoped<MedicalHistoryMetricsService>();
         services.AddScoped<DemographicMetricsService>();
+        services.AddScoped<PaymentMetricsService>();
         services.AddSingleton<IConversationStateManager, ConversationStateManager>();
         return services;
     }
