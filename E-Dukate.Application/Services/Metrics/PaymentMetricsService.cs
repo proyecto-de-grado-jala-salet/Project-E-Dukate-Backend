@@ -1,7 +1,6 @@
 using E_Dukate.Application.Services.Payments;
 using E_Dukate.Application.DTOs.Payments;
 using E_Dukate.Domain.Entities.Payments;
-using System.Globalization;
 using E_Dukate.Application.DTOs.Metrics;
 
 namespace E_Dukate.Application.Services.Metrics;
@@ -15,7 +14,7 @@ public class PaymentMetricsService
         _paymentService = paymentService;
     }
 
-    public async Task<List<IncomeByPeriodDto>> GetTotalIncomeByPeriodAsync(string? periodType, DateTime? startDate, DateTime? endDate)
+    public async Task<List<IncomeByPeriodDto>> GetTotalCompletedIncomeByPeriodAsync(string? periodType, DateTime? startDate, DateTime? endDate)
     {
         periodType = string.IsNullOrWhiteSpace(periodType) ? "Monthly" : periodType;
 
@@ -31,17 +30,15 @@ public class PaymentMetricsService
         var (payments, _) = await _paymentService.GetFilteredPaymentsAsync(filter);
 
         var validDates = payments
-            .Select(p => p.FirstPaymentDate.HasValue ? p.FirstPaymentDate.Value : p.LastPaymentDate.HasValue ? p.LastPaymentDate.Value : (DateTime?)null)
-            .Where(d => d.HasValue)
-            .Select(d => d!.Value)
+            .Where(p => p.LastPaymentDate.HasValue)
+            .Select(p => p.LastPaymentDate!.Value)
             .ToList();
 
         DateTime defaultStartDate = startDate ?? (validDates.Any() ? validDates.Min() : DateTime.UtcNow.AddYears(-1));
         DateTime defaultEndDate = endDate ?? (validDates.Any() ? validDates.Max() : DateTime.UtcNow);
 
-        var filteredPayments = payments
-            .Where(p => (p.FirstPaymentDate.HasValue && p.FirstPaymentDate.Value >= defaultStartDate && p.FirstPaymentDate.Value <= defaultEndDate) ||
-                        (p.LastPaymentDate.HasValue && p.LastPaymentDate.Value >= defaultStartDate && p.LastPaymentDate.Value <= defaultEndDate))
+        var forPayments = payments
+            .Where(p => p.LastPaymentDate.HasValue && p.LastPaymentDate.Value >= defaultStartDate && p.LastPaymentDate.Value <= defaultEndDate)
             .ToList();
 
         var result = new List<IncomeByPeriodDto>();
@@ -49,16 +46,15 @@ public class PaymentMetricsService
         switch (periodType.ToLower())
         {
             case "monthly":
-                result = filteredPayments
+                result = forPayments
                     .GroupBy(p => new
                     {
-                        Year = p.FirstPaymentDate?.Year ?? p.LastPaymentDate?.Year,
-                        Month = p.FirstPaymentDate?.Month ?? p.LastPaymentDate?.Month
+                        Year = p.LastPaymentDate!.Value.Year,
+                        Month = p.LastPaymentDate!.Value.Month
                     })
-                    .Where(g => g.Key.Year.HasValue && g.Key.Month.HasValue)
                     .Select(g => new IncomeByPeriodDto
                     {
-                        Period = $"{g.Key.Year!.Value}-{g.Key.Month!.Value:00}",
+                        Period = $"{g.Key.Year}-{g.Key.Month:00}",
                         TotalIncome = g.Sum(p => p.TotalAmount)
                     })
                     .OrderBy(r => r.Period)
@@ -66,21 +62,17 @@ public class PaymentMetricsService
                 break;
 
             case "weekly":
-                result = filteredPayments
+                result = forPayments
                     .GroupBy(p =>
                     {
-                        var date = p.FirstPaymentDate ?? p.LastPaymentDate;
-                        if (!date.HasValue) return null;
-                        var week = CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(
-                            date.Value,
-                            CalendarWeekRule.FirstFourDayWeek,
-                            DayOfWeek.Monday);
-                        return new { Year = date.Value.Year, Week = week };
+                        var date = p.LastPaymentDate!.Value;
+                        var daysFromMonday = (date.DayOfWeek - DayOfWeek.Monday + 7) % 7;
+                        var weekStart = date.Date.AddDays(-daysFromMonday);
+                        return new { Year = weekStart.Year, Month = weekStart.Month, Day = weekStart.Day };
                     })
-                    .Where(g => g.Key != null)
                     .Select(g => new IncomeByPeriodDto
                     {
-                        Period = $"{g.Key!.Year}-W{g.Key.Week:00}",
+                        Period = $"{g.Key.Year}-{g.Key.Month:00}-{g.Key.Day:00} a {g.Key.Year}-{g.Key.Month:00}-{g.Key.Day + 6:00}",
                         TotalIncome = g.Sum(p => p.TotalAmount)
                     })
                     .OrderBy(r => r.Period)
@@ -88,12 +80,11 @@ public class PaymentMetricsService
                 break;
 
             case "yearly":
-                result = filteredPayments
-                    .GroupBy(p => p.FirstPaymentDate?.Year ?? p.LastPaymentDate?.Year)
-                    .Where(g => g.Key.HasValue)
+                result = forPayments
+                    .GroupBy(p => p.LastPaymentDate!.Value.Year)
                     .Select(g => new IncomeByPeriodDto
                     {
-                        Period = g.Key!.Value.ToString(),
+                        Period = g.Key.ToString(),
                         TotalIncome = g.Sum(p => p.TotalAmount)
                     })
                     .OrderBy(r => r.Period)
@@ -186,7 +177,7 @@ public class PaymentMetricsService
         return years;
     }
 
-    public async Task<PendingVsCompletedPaymentsDto> GetPendingVsCompletedPaymentsAsync()
+    public async Task<PendingVsCompletedPaymentsDto> GetPendingVsCompletedPaymentsAsync(DateTime? startDate, DateTime? endDate)
     {
         var filter = new PaymentFilterDto
         {
@@ -195,12 +186,29 @@ public class PaymentMetricsService
         };
 
         var (payments, _) = await _paymentService.GetFilteredPaymentsAsync(filter);
-        var result = new PendingVsCompletedPaymentsDto
-        {
-            PendingAmount = payments.Where(p => p.Status == PaymentStatus.Pending).Sum(p => p.PendingAmount),
-            CompletedAmount = payments.Where(p => p.Status == PaymentStatus.Completed).Sum(p => p.AmountPaid)
-        };
 
-        return result;
+        var filteredPayments = payments;
+        if (startDate.HasValue && endDate.HasValue)
+        {
+            var validDates = payments
+                .Select(p => p.FirstPaymentDate.HasValue ? p.FirstPaymentDate.Value : p.LastPaymentDate.HasValue ? p.LastPaymentDate.Value : (DateTime?)null)
+                .Where(d => d.HasValue)
+                .Select(d => d!.Value)
+                .ToList();
+
+            DateTime defaultStartDate = startDate.Value;
+            DateTime defaultEndDate = endDate.Value;
+
+            filteredPayments = payments
+                .Where(p => (p.FirstPaymentDate.HasValue && p.FirstPaymentDate.Value >= defaultStartDate && p.FirstPaymentDate.Value <= defaultEndDate) ||
+                            (p.LastPaymentDate.HasValue && p.LastPaymentDate.Value >= defaultStartDate && p.LastPaymentDate.Value <= defaultEndDate))
+                .ToList();
+        }
+
+        return new PendingVsCompletedPaymentsDto 
+        {
+            PendingAmount = filteredPayments.Where(p => p.Status == PaymentStatus.Pending).Sum(p => p.PendingAmount),
+            CompletedAmount = filteredPayments.Where(p => p.Status == PaymentStatus.Completed).Sum(p => p.AmountPaid)
+        };
     }
 }

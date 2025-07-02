@@ -25,7 +25,7 @@ public class PaymentMetricsController : ControllerBase
             if (startDate.HasValue && endDate.HasValue && startDate > endDate)
                 return BadRequest(new { Error = "La fecha de inicio debe ser anterior o igual a la fecha de fin." });
 
-            var result = await _paymentMetricsService.GetTotalIncomeByPeriodAsync(periodType, startDate, endDate);
+            var result = await _paymentMetricsService.GetTotalCompletedIncomeByPeriodAsync(periodType, startDate, endDate);
             if (!result.Any())
             {
                 return Ok(new { Message = "No hay datos disponibles para el período seleccionado." });
@@ -43,14 +43,19 @@ public class PaymentMetricsController : ControllerBase
     }
 
     [HttpGet("pending-vs-completed")]
-    public async Task<IActionResult> GetPendingVsCompletedPayments()
+    public async Task<IActionResult> GetPendingVsCompletedPayments(
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null)
     {
         try
         {
-            var result = await _paymentMetricsService.GetPendingVsCompletedPaymentsAsync();
+            if (startDate.HasValue && endDate.HasValue && startDate > endDate)
+                return BadRequest(new { Error = "La fecha de inicio debe ser anterior o igual a la fecha de fin." });
+
+            var result = await _paymentMetricsService.GetPendingVsCompletedPaymentsAsync(startDate, endDate);
             if (result.PendingAmount == 0 && result.CompletedAmount == 0)
             {
-                return Ok(new { Message = "No hay pagos registrados." });
+                return Ok(new { Message = "No hay pagos registrados en el período seleccionado." });
             }
             return Ok(result);
         }
