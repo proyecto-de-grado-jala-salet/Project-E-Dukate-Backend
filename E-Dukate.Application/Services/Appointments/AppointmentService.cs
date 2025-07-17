@@ -510,40 +510,78 @@ public class AppointmentService
         };
     }
 
-    public async Task<(IEnumerable<object>, int)> GetAppointmentsAsync(PaginationParams pagination)
+    public async Task<ValueResult<(IEnumerable<object>, int)>> GetAppointmentsAsync(
+    Guid? patientId,
+    Guid? specialistId,
+    DateTime? date,
+    string? status,
+    string? patientSearch,
+    PaginationParams pagination)
     {
+        var filterDate = date.HasValue
+            ? DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc)
+            : DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
+
         var query = _appointmentRepository.GetAll()
             .Include(a => a.Patient)
             .Include(a => a.Specialty)
             .Include(a => a.Specialist)
             .Include(a => a.ScheduledSessions)
-            .ThenInclude(ss => ss.TimeSlot);
+            .ThenInclude(ss => ss.TimeSlot)
+            .AsQueryable();
 
+        if (patientId.HasValue)
+        {
+            query = query.Where(a => a.PatientId == patientId.Value);
+        }
+
+        if (specialistId.HasValue)
+        {
+            query = query.Where(a => a.SpecialistId == specialistId.Value);
+        }
+
+        query = query.Where(a => a.ScheduledSessions.Any(ss =>
+            DateTime.SpecifyKind(ss.StartSessionDateTime, DateTimeKind.Utc).Date == filterDate));
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (!Enum.TryParse<ScheduledSessionStatus>(status, true, out var parsedStatus))
+            {
+                return ValueResult<(IEnumerable<object>, int)>.Failure("Estado inválido. Los valores permitidos son: Scheduled, Confirmed, Cancelled, Rescheduled.");
+            }
+
+            query = query.Where(a => a.ScheduledSessions.Any(ss => ss.Status == parsedStatus));
+        }
+
+        if (!string.IsNullOrWhiteSpace(patientSearch))
+        {
+            query = query.Where(a => (a.Patient.Names + " " + a.Patient.LastNamePaternal + " " + (a.Patient.LastNameMaternal ?? "")).ToLower()
+                .Contains(patientSearch.ToLower()));
+        }
+        
         var totalCount = await query.CountAsync();
+
         var items = await query
+            .OrderBy(a => a.ScheduledSessions.FirstOrDefault()!.StartSessionDateTime)
             .Skip((pagination.PageNumber - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
             .ToListAsync();
 
-        var result = items.Select(a => new
+        var result = items.Select(a =>
         {
-            a.Id,
-            a.PatientId,
-            a.SpecialtyId,
-            a.SpecialistId,
-            a.SessionCount,
-            ScheduledSessions = a.ScheduledSessions.Select(ss => new
+            var session = a.ScheduledSessions.FirstOrDefault(ss =>
+                DateTime.SpecifyKind(ss.StartSessionDateTime, DateTimeKind.Utc).Date == filterDate);
+            return new
             {
-                ss.Id,
-                ss.TimeSlotId,
-                ss.StartSessionDateTime,
-                ss.EndSessionDateTime,
-                Status = ss.Status.ToString()
-            }),
-            a.PaymentId,
-            Status = GetAppointmentStatus(a)
+                a.Id,
+                StartTime = session?.StartSessionDateTime.ToString("HH:mm"),
+                EndTime = session?.EndSessionDateTime.ToString("HH:mm"),
+                PatientName = $"{a.Patient.Names} {a.Patient.LastNamePaternal} {(a.Patient.LastNameMaternal ?? "")}".Trim(),
+                SpecialistName = $"{a.Specialist.Names} {a.Specialist.LastNamePaternal} {(a.Specialist.LastNameMaternal ?? "")}".Trim(),
+                Status = session?.Status.ToString() ?? GetAppointmentStatus(a)
+            };
         });
 
-        return (result, totalCount);
+        return ValueResult<(IEnumerable<object>, int)>.Success((result, totalCount));
     }
 }

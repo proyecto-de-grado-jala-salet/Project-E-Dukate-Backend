@@ -61,9 +61,21 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] Guid? patientId,
+        [FromQuery] Guid? specialistId,
+        [FromQuery] DateTime? date,
+        [FromQuery] string? status,
+        [FromQuery] string? patientSearch,
+        [FromQuery] PaginationParams pagination)
     {
-        var (items, totalCount) = await _appointmentService.GetAppointmentsAsync(pagination);
+        var result = await _appointmentService.GetAppointmentsAsync(patientId, specialistId, date, status, patientSearch, pagination);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { Error = result.ErrorMessage });
+        }
+
+        var (items, totalCount) = result.Value;
         return Ok(new
         {
             Items = items,
