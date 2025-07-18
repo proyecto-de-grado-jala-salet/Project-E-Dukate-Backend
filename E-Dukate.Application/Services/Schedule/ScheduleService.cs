@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using E_Dukate.Domain.Primitives;
 using E_Dukate.Domain.Entities.Users;
 using E_Dukate.Application.DTOs.Common;
-using E_Dukate.Domain.Entities.Auth;
+using E_Dukate.Domain.Entities.Appointments;
 
 namespace E_Dukate.Application.Services;
 
@@ -29,7 +29,7 @@ public class ScheduleService
         _validator = validator;
     }
 
-    public Result UpdateSchedules(Guid specialistId, List<ScheduleDto> scheduleDtos)
+    public async Task<Result> UpdateSchedulesAsync(Guid specialistId, List<ScheduleDto> scheduleDtos)
     {
         foreach (var dto in scheduleDtos)
         {
@@ -38,8 +38,7 @@ public class ScheduleService
                 return Result.Failure(string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
         }
 
-        var specialist = _specialistRepository.GetAll()
-            .FirstOrDefault(s => s.Id == specialistId);
+        var specialist = await _specialistRepository.GetByIdAsync(specialistId);
         if (specialist == null)
             return Result.Failure("Specialist not found.");
 
@@ -51,14 +50,33 @@ public class ScheduleService
         var scheduleIdsToDelete = existingSchedules.Select(s => s.Id).ToList();
         var timeSlotIdsToDelete = existingSchedules.SelectMany(s => s.TimeSlots.Select(ts => ts.Id)).ToList();
 
-        foreach (var timeSlotId in timeSlotIdsToDelete)
+        try
         {
-            _timeSlotRepository.Delete(timeSlotId);
-        }
+            await _timeSlotRepository.DeleteRelatedEntitiesAsync<ScheduledSession>(
+    timeSlotIdsToDelete, 
+    ss => timeSlotIdsToDelete.Contains(ss.TimeSlotId));
 
-        foreach (var scheduleId in scheduleIdsToDelete)
+            foreach (var timeSlotId in timeSlotIdsToDelete)
+            {
+                var timeSlot = await _timeSlotRepository.GetByIdAsync(timeSlotId);
+                if (timeSlot != null)
+                {
+                    await _timeSlotRepository.DeleteAsync(timeSlotId);
+                }
+            }
+
+            foreach (var scheduleId in scheduleIdsToDelete)
+            {
+                var schedule = await _scheduleRepository.GetByIdAsync(scheduleId);
+                if (schedule != null)
+                {
+                    await _scheduleRepository.DeleteAsync(scheduleId);
+                }
+            }
+        }
+        catch (DbUpdateException ex)
         {
-            _scheduleRepository.Delete(scheduleId);
+            return Result.Failure($"Error al eliminar horarios o citas: {ex.InnerException?.Message ?? ex.Message}");
         }
 
         foreach (var dto in scheduleDtos)
@@ -74,8 +92,9 @@ public class ScheduleService
                     Attends = dto.Attends,
                     TimeSlots = new List<TimeSlot>()
                 };
-                _scheduleRepository.Add(schedule);
 
+                await _scheduleRepository.AddAsync(schedule);
+                
                 foreach (var ts in dto.TimeSlots)
                 {
                     var timeSlot = new TimeSlot
@@ -85,22 +104,25 @@ public class ScheduleService
                         StartTime = TimeOnly.Parse(ts.StartTime!),
                         EndTime = TimeOnly.Parse(ts.EndTime!)
                     };
-                    _timeSlotRepository.Add(timeSlot);
+                    await _timeSlotRepository.AddAsync(timeSlot);
                     schedule.TimeSlots.Add(timeSlot);
                 }
             }
-            catch (Exception ex) when (ex is ArgumentNullException or FormatException or ArgumentException)
+            catch (ArgumentException ex)
             {
-                return Result.Failure($"Invalid schedule data: {ex.Message}");
+                return Result.Failure($"Datos de horario inválidos: {ex.Message}");
+            }
+            catch (DbUpdateException ex)
+            {
+                return Result.Failure($"Error al guardar en la base de datos: {ex.InnerException?.Message ?? ex.Message}");
             }
         }
-
         return Result.Success();
     }
 
     public IEnumerable<Schedule> GetSchedulesBySpecialistId(Guid specialistId) =>
         _scheduleRepository.GetAll()
-            .Include(s => s.TimeSlots)
+            .Include(s => s.TimeSlots.OrderByDescending(ts => ts.StartTime))
             .Where(s => s.SpecialistId == specialistId)
             .ToList();
 
