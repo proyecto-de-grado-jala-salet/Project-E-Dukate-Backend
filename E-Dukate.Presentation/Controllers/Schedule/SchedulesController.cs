@@ -17,11 +17,11 @@ public class SchedulesController : ControllerBase
     }
 
     [HttpPut("specialist/{specialistId}")]
-    public IActionResult UpdateSchedules(Guid specialistId, [FromBody] List<ScheduleDto> scheduleDtos)
+    public async Task<IActionResult> UpdateSchedules(Guid specialistId, [FromBody] List<ScheduleDto> scheduleDtos)
     {
         try
         {
-            var result = _scheduleService.UpdateSchedules(specialistId, scheduleDtos);
+            var result = await _scheduleService.UpdateSchedulesAsync(specialistId, scheduleDtos);
             if (!result.IsSuccess)
             {
                 return BadRequest(new { errors = result.ErrorMessage.Split(", ").ToList() });
@@ -31,7 +31,7 @@ public class SchedulesController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { errors = new[] { "An unexpected error occurred.", ex.Message } });
+            return StatusCode(500, new { errors = new[] { "Ocurrió un error inesperado.", ex.Message, ex.InnerException?.Message } });
         }
     }
 

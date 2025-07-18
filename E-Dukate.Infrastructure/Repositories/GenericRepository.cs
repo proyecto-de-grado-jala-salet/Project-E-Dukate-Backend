@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using E_Dukate.Domain.Interfaces;
 using E_Dukate.Domain.Primitives;
 using E_Dukate.Infrastructure.Data;
+using System.Linq.Expressions;
 
 namespace E_Dukate.Infrastructure.Repositories;
 
@@ -52,4 +53,15 @@ public class GenericRepository<T> : IGenericRepository<T> where T : Entity
     public void Update(T entity) => UpdateAsync(entity).GetAwaiter().GetResult();
     public void Delete(Guid id) => DeleteAsync(id).GetAwaiter().GetResult();
     public T? GetById(Guid id) => GetByIdAsync(id).GetAwaiter().GetResult();
+
+    public async Task DeleteRelatedEntitiesAsync<TEntity>(List<Guid> ids, Expression<Func<TEntity, bool>> predicate)
+    where TEntity : class
+    {
+        if (ids.Any())
+        {
+            await _context.Set<TEntity>()
+                .Where(predicate)
+                .ExecuteDeleteAsync();
+        }
+    }
 }
