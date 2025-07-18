@@ -1,3 +1,6 @@
+
+using System.Linq.Expressions;
+
 namespace E_Dukate.Domain.Interfaces;
 
 public interface IGenericRepository<T> where T : Primitives.Entity
@@ -11,4 +14,6 @@ public interface IGenericRepository<T> where T : Primitives.Entity
     Task UpdateAsync(T entity);
     Task DeleteAsync(Guid id);
     Task<T?> GetByIdAsync(Guid id);
+    Task DeleteRelatedEntitiesAsync<TEntity>(List<Guid> ids, Expression<Func<TEntity, bool>> predicate) 
+        where TEntity : class;
 }
