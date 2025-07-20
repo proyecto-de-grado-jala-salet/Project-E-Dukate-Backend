@@ -39,7 +39,19 @@ public class SchedulesController : ControllerBase
     public IActionResult GetSchedules(Guid specialistId)
     {
         var schedules = _scheduleService.GetSchedulesBySpecialistId(specialistId);
-        return Ok(schedules);
+        var response = schedules.Select(s => new
+        {
+            s.Id,
+            s.DayOfWeek,
+            s.Attends,
+            TimeSlots = s.TimeSlots.Select(ts => new
+            {
+                ts.Id,
+                ts.StartTime,
+                ts.EndTime
+            })
+        });
+        return Ok(response);
     }
 
     [HttpGet("search")]
@@ -66,5 +78,19 @@ public class SchedulesController : ControllerBase
             PageSize = pagination.PageSize,
             TotalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize)
         });
+    }
+
+    [HttpGet("specialists-by-specialty/{specialtyId}")]
+    public async Task<IActionResult> GetSpecialistsBySpecialtyId(Guid specialtyId)
+    {
+        var specialists = await _scheduleService.GetSpecialistsBySpecialtyIdAsync(specialtyId);
+        var response = specialists.Select(s => new
+        {
+            s.Id,
+            s.Names,
+            s.LastNamePaternal,
+            s.LastNameMaternal
+        });
+        return Ok(response);
     }
 }
