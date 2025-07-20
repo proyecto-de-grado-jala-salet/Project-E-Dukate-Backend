@@ -53,7 +53,7 @@ public class ScheduleService
         try
         {
             await _timeSlotRepository.DeleteRelatedEntitiesAsync<ScheduledSession>(
-    timeSlotIdsToDelete, 
+    timeSlotIdsToDelete,
     ss => timeSlotIdsToDelete.Contains(ss.TimeSlotId));
 
             foreach (var timeSlotId in timeSlotIdsToDelete)
@@ -94,7 +94,7 @@ public class ScheduleService
                 };
 
                 await _scheduleRepository.AddAsync(schedule);
-                
+
                 foreach (var ts in dto.TimeSlots)
                 {
                     var timeSlot = new TimeSlot
@@ -151,5 +151,13 @@ public class ScheduleService
             .ToListAsync();
 
         return (items, totalCount);
+    }
+
+    public async Task<IEnumerable<Specialist>> GetSpecialistsBySpecialtyIdAsync(Guid specialtyId)
+    {
+        return await _specialistRepository.GetAll()
+            .Include(s => s.Specialty)
+            .Where(s => s.Specialty.Id == specialtyId)
+            .ToListAsync();
     }
 }

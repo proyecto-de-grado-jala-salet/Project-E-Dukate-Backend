@@ -115,4 +115,20 @@ public class AppointmentsController : ControllerBase
 
         return Ok();
     }
+
+    [HttpPost("preview")]
+    public async Task<IActionResult> GetAppointmentPreview([FromBody] AppointmentDto dto)
+    {
+        var result = await _appointmentService.GetAppointmentPreviewAsync(dto);
+        if (!result.IsSuccess)
+            return BadRequest(new { Error = result.ErrorMessage });
+
+        var previewData = result.Value.Select(item => new
+        {
+            start = item.Start.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            end = item.End.ToString("yyyy-MM-ddTHH:mm:ssZ")
+        }).ToList();
+
+        return Ok(previewData);
+    }
 }
