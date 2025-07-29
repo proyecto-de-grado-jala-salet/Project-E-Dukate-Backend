@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace E_Dukate.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250705164532_InitialCreate")]
+    [Migration("20250728210346_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -177,6 +177,31 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.HasIndex("SpecialistId");
 
                     b.ToTable("MedicalConsultations", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FilePath")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UploadDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("MedicalDocuments");
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistory", b =>
@@ -561,6 +586,17 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.Navigation("Specialist");
                 });
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalDocument", b =>
+                {
+                    b.HasOne("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistoryPermission", "Permission")
+                        .WithMany("Documents")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistory", b =>
                 {
                     b.HasOne("E_Dukate.Domain.Entities.Users.Patient", "Patient")
@@ -666,6 +702,8 @@ namespace E_Dukate.Infrastructure.Migrations
             modelBuilder.Entity("E_Dukate.Domain.Entities.MedicalHistories.MedicalHistoryPermission", b =>
                 {
                     b.Navigation("Consultations");
+
+                    b.Navigation("Documents");
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.Schedule", b =>

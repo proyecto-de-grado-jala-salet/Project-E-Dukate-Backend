@@ -123,7 +123,7 @@ public class AppointmentsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { Error = result.ErrorMessage });
 
-        var previewData = result.Value.Select(item => new
+        var previewData = result.Value!.Select(item => new
         {
             start = item.Start.ToString("yyyy-MM-ddTHH:mm:ssZ"),
             end = item.End.ToString("yyyy-MM-ddTHH:mm:ssZ")
