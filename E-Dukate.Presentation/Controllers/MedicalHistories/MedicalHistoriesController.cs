@@ -26,7 +26,33 @@ public class MedicalHistoriesController : ControllerBase
         if (medicalHistory == null)
             return NotFound("Medical History were not found for the specified patient.");
 
-        return Ok(medicalHistory);
+        var historyDto = new MedicalHistoryDto
+        {
+            Id = medicalHistory.Id,
+            PatientId = medicalHistory.PatientId,
+            Permissions = medicalHistory.Permissions.Select(p => new MedicalHistoryPermissionDto
+            {
+                Id = p.Id,
+                SpecialistId = p.SpecialistId,
+                CanEdit = p.CanEdit,
+                Status = p.Status,
+                Consultations = p.Consultations.Select(c => new MedicalConsultationDto
+                {
+                    Id = c.Id,
+                    SpecialistId = c.SpecialistId,
+                    Reason = c.Reason,
+                    ConsultationDate = c.ConsultationDate,
+                    Notes = c.Notes
+                }).ToList(),
+                Documents = p.Documents.Select(d => new MedicalDocumentDto
+                {
+                    Id = d.Id,
+                    FileName = d.FileName,
+                    UploadDate = d.UploadDate
+                }).ToList()
+            }).ToList()
+        };
+        return Ok(historyDto);
     }
 
     [HttpPost("permissions")]

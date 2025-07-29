@@ -12,4 +12,5 @@ public class MedicalHistoryPermission : Entity
     public bool CanEdit { get; set; } = true;
     public MedicalHistoryStatus Status { get; set; } = MedicalHistoryStatus.ContinuaEnTratamiento;
     public List<MedicalConsultation> Consultations { get; set; } = new List<MedicalConsultation>();
+    public List<MedicalDocument> Documents { get; set; } = new List<MedicalDocument>();
 }

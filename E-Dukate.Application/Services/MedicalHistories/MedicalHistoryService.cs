@@ -33,6 +33,8 @@ public class MedicalHistoryService
         var medicalHistory = await _medicalHistoryRepository.GetAll()
             .Include(mh => mh.Permissions)
                 .ThenInclude(p => p.Consultations)
+            .Include(mh => mh.Permissions)
+                .ThenInclude(p => p.Documents)
             .FirstOrDefaultAsync(mh => mh.PatientId == patientId);
 
         if (medicalHistory == null) return null;
@@ -54,6 +56,12 @@ public class MedicalHistoryService
                     Reason = c.Reason,
                     ConsultationDate = c.ConsultationDate,
                     Notes = c.Notes
+                }).ToList(),
+                Documents = p.Documents.Select(d => new MedicalDocumentDto
+                {
+                    Id = d.Id,
+                    FileName = d.FileName!,
+                    UploadDate = d.UploadDate
                 }).ToList()
             }).ToList()
         };
@@ -112,7 +120,7 @@ public class MedicalHistoryService
 
         if (permission == null)
             return false;
-            
+
         if (!permission.CanEdit)
             return false;
 
