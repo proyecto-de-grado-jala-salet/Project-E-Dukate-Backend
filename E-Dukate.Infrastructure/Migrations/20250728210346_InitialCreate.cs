@@ -299,6 +299,27 @@ namespace E_Dukate.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MedicalDocuments",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    PermissionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    FileName = table.Column<string>(type: "text", nullable: true),
+                    FilePath = table.Column<string>(type: "text", nullable: true),
+                    UploadDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MedicalDocuments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MedicalDocuments_MedicalHistoryPermissions_PermissionId",
+                        column: x => x.PermissionId,
+                        principalTable: "MedicalHistoryPermissions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TimeSlots",
                 columns: table => new
                 {
@@ -370,6 +391,11 @@ namespace E_Dukate.Infrastructure.Migrations
                 name: "IX_MedicalConsultations_SpecialistId",
                 table: "MedicalConsultations",
                 column: "SpecialistId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MedicalDocuments_PermissionId",
+                table: "MedicalDocuments",
+                column: "PermissionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MedicalHistories_PatientId",
@@ -446,6 +472,9 @@ namespace E_Dukate.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "MedicalConsultations");
+
+            migrationBuilder.DropTable(
+                name: "MedicalDocuments");
 
             migrationBuilder.DropTable(
                 name: "Payments");

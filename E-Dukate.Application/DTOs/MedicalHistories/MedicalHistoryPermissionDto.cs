@@ -7,4 +7,5 @@ public class MedicalHistoryPermissionDto
     public bool CanEdit { get; set; }
     public string Status { get; set; } = "ContinuaEnTratamiento";
     public List<MedicalConsultationDto> Consultations { get; set; } = new List<MedicalConsultationDto>();
+    public List<MedicalDocumentDto> Documents { get; set; } = new List<MedicalDocumentDto>();
 }
