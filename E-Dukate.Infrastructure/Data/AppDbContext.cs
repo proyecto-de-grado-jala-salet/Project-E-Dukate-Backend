@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
     public DbSet<MedicalHistory> MedicalHistories { get; set; }
     public DbSet<MedicalHistoryPermission> MedicalHistoryPermissions { get; set; }
     public DbSet<MedicalConsultation> MedicalConsultations { get; set; }
+    public DbSet<MedicalDocument> MedicalDocuments { get; set; }
     public DbSet<Appointment> Appointments { get; set; }
     public DbSet<ScheduledSession> ScheduledSessions { get; set; }
     public DbSet<Payment> Payments { get; set; }
