@@ -376,32 +376,44 @@ public class AppointmentService
 
         if (session.Status == ScheduledSessionStatus.Cancelled)
             return Result.Failure("La sesión ya está cancelada.");
-        
+
         if (session.StartSessionDateTime <= DateTime.UtcNow)
             return Result.Failure("No se puede cancelar una sesión pasada.");
-        
+
         session.Status = ScheduledSessionStatus.Cancelled;
 
         var activeSessions = appointment.ScheduledSessions
             .Count(s => s.Status != ScheduledSessionStatus.Cancelled);
 
-        var newTotalAmount = appointment.Payment.SessionCost * activeSessions;
+        if (activeSessions == 0)
+        {
+            var deleteResult = await _paymentService.DeletePaymentAsync(appointment.Payment.Id);
+            if (!deleteResult.IsSuccess)
+                return Result.Failure($"Error al eliminar el pago: {deleteResult.ErrorMessage}");
 
-        var originalAmountPaid = appointment.Payment.AmountPaid;
+            appointment.Payment = null;
+            appointment.PaymentId = null;
+        }
+        else
+        {
+            var newTotalAmount = appointment.Payment.SessionCost * activeSessions;
 
-        appointment.Payment.SessionCount = activeSessions;
-        appointment.Payment.TotalAmount = newTotalAmount;
+            var originalAmountPaid = appointment.Payment.AmountPaid;
 
-        appointment.Payment.AmountPaid = originalAmountPaid;
+            appointment.Payment.SessionCount = activeSessions;
+            appointment.Payment.TotalAmount = newTotalAmount;
 
-        appointment.Payment.PendingAmount = Math.Max(0, newTotalAmount - originalAmountPaid);
+            appointment.Payment.AmountPaid = originalAmountPaid;
 
-        appointment.Payment.Status = appointment.Payment.PendingAmount == 0
-            ? PaymentStatus.Completed
-            : PaymentStatus.Pending;
-        
-        appointment.Payment.SpecialistAmount = newTotalAmount * 0.5m;
-        appointment.Payment.InstitutionAmount = newTotalAmount * 0.5m;
+            appointment.Payment.PendingAmount = Math.Max(0, newTotalAmount - originalAmountPaid);
+
+            appointment.Payment.Status = appointment.Payment.PendingAmount == 0
+                ? PaymentStatus.Completed
+                : PaymentStatus.Pending;
+
+            appointment.Payment.SpecialistAmount = newTotalAmount * 0.5m;
+            appointment.Payment.InstitutionAmount = newTotalAmount * 0.5m;
+        }
 
         await _appointmentRepository.UpdateAsync(appointment);
 
