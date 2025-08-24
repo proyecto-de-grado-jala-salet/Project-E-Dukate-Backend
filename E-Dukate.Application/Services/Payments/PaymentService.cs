@@ -99,10 +99,13 @@ public class PaymentService
         if (appointment.Payment == null)
             return Result.Success();
 
+        var payment = appointment.Payment;
         var activeSessionCount = appointment.ScheduledSessions
             .Count(ss => ss.Status != ScheduledSessionStatus.Cancelled);
 
-        var payment = appointment.Payment;
+        if (payment.SessionCount == activeSessionCount)
+            return Result.Success();
+
         payment.SessionCount = activeSessionCount;
         payment.TotalAmount = payment.SessionCost * activeSessionCount;
         payment.PendingAmount = payment.TotalAmount - payment.AmountPaid;
