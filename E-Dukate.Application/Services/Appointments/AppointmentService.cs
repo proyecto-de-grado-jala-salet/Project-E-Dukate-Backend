@@ -337,20 +337,34 @@ public class AppointmentService
         return Result.Success();
     }
 
-    public async Task<Result> ConfirmSessionAsync(Guid sessionId, Guid patientId)
+    public async Task<Result> ConfirmSessionAsync(Guid appointmentId, Guid sessionId)
     {
-        var session = await _scheduledSessionRepository.GetAll()
-            .Include(ss => ss.Appointment)
-            .ThenInclude(a => a!.Patient)
-            .FirstOrDefaultAsync(ss => ss.Id == sessionId);
-        if (session == null)
-            return Result.Failure("Session not found.");
+        var appointment = await _appointmentRepository.GetAll()
+            .Include(a => a.ScheduledSessions)
+            .Include(a => a.Payment)
+            .FirstOrDefaultAsync(a => a.Id == appointmentId);
+        
+        if (appointment == null)
+            return Result.Failure("Cita no encontrada.");
 
-        if (session.AppointmentId != patientId)
-            return Result.Failure("You do not have permission to confirm this session.");
+        if (appointment.Payment == null)
+            return Result.Failure("La cita no tiene pago asociado.");
+
+        var session = appointment.ScheduledSessions.FirstOrDefault(s => s.Id == sessionId);
+        if (session == null)
+            return Result.Failure("Sesión no encontrada.");
 
         if (session.Status == ScheduledSessionStatus.Cancelled)
-            return Result.Failure("You cannot confirm a cancelled session.");
+            return Result.Failure("No puedes confirmar una sesión cancelada.");
+
+        if (session.Status == ScheduledSessionStatus.Confirmed)
+            return Result.Failure("La sesión ya está confirmada.");
+
+        if (session.StartSessionDateTime <= DateTime.UtcNow)
+            return Result.Failure("No se puede confirmar una sesión pasada.");
+
+        if (appointment.Payment.AmountPaid < appointment.Payment.TotalAmount / 2)
+            return Result.Failure("El monto pagado debe ser al menos la mitad del monto total para confirmar la sesión.");
 
         session.Status = ScheduledSessionStatus.Confirmed;
         await _scheduledSessionRepository.UpdateAsync(session);
