@@ -40,16 +40,6 @@ public class AppointmentsController : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(Guid id)
-    {
-        var result = await _appointmentService.DeleteAppointmentAsync(id);
-        if (!result.IsSuccess)
-            return NotFound(new { Error = result.ErrorMessage });
-
-        return NoContent();
-    }
-
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -96,24 +86,28 @@ public class AppointmentsController : ControllerBase
         return Ok();
     }
 
-    [HttpPost("{id}/sessions/{sessionId}/cancel")]
-    public async Task<IActionResult> CancelSession(Guid id, Guid sessionId, [FromQuery] Guid patientId)
+    [HttpPut("appointment/{appointmentId}/cancel-session/{sessionId}")]
+    public async Task<IActionResult> CancelSession(
+        Guid appointmentId,
+        Guid sessionId)
     {
-        var result = await _appointmentService.CancelSessionAsync(sessionId, patientId);
+        var result = await _appointmentService.CancelSessionAsync(appointmentId, sessionId);
         if (!result.IsSuccess)
-            return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
+            return BadRequest(new { Error = result.ErrorMessage });
 
-        return Ok();
+        return NoContent();
     }
 
-    [HttpPost("{id}/sessions/{sessionId}/reschedule")]
-    public async Task<IActionResult> RescheduleSession(Guid id, Guid sessionId, [FromQuery] Guid patientId, [FromBody] ScheduledSessionDto dto)
+    [HttpPut("reschedule-session/{appointmentId}")]
+    public async Task<IActionResult> RescheduleSession(
+        Guid appointmentId,
+        [FromBody] RescheduleSessionDto dto)
     {
-        var result = await _appointmentService.RescheduleSessionAsync(sessionId, patientId, dto);
+        var result = await _appointmentService.RescheduleSessionAsync(appointmentId, dto);
         if (!result.IsSuccess)
-            return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
+            return BadRequest(new { Error = result.ErrorMessage });
 
-        return Ok();
+        return NoContent();
     }
 
     [HttpPost("preview")]

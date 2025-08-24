@@ -648,7 +648,7 @@ public class AppointmentService
             .ToListAsync();
 
         var scheduledDates = new List<(DateTime, DateTime)>();
-        var currentDate = DateTime.UtcNow.Date; // Usar UTC
+        var currentDate = DateTime.UtcNow.Date;
         var sessionsAssigned = 0;
 
         var sessionsPerSlot = dto.ScheduledSessions.Count > 0
