@@ -77,13 +77,17 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPost("{id}/sessions/{sessionId}/confirm")]
-    public async Task<IActionResult> ConfirmSession(Guid id, Guid sessionId, [FromQuery] Guid patientId)
+    public async Task<IActionResult> ConfirmSession(Guid id, Guid sessionId)
     {
-        var result = await _appointmentService.ConfirmSessionAsync(sessionId, patientId);
+        var result = await _appointmentService.ConfirmSessionAsync(id, sessionId);
         if (!result.IsSuccess)
+        {
+            if (result.ErrorMessage.Contains("no encontrada"))
+                return NotFound(new { Error = result.ErrorMessage });
             return BadRequest(new { Errors = result.ErrorMessage.Split(", ").ToList() });
+        }
 
-        return Ok();
+        return NoContent();
     }
 
     [HttpPut("appointment/{appointmentId}/cancel-session/{sessionId}")]
