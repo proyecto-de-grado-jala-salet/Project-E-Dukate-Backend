@@ -70,6 +70,20 @@ namespace E_Dukate.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PaymentQRs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    FileName = table.Column<string>(type: "text", nullable: false),
+                    FilePath = table.Column<string>(type: "text", nullable: false),
+                    UploadDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PaymentQRs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Specialties",
                 columns: table => new
                 {
@@ -414,6 +428,12 @@ namespace E_Dukate.Infrastructure.Migrations
                 column: "SpecialistId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PaymentQRs_FilePath",
+                table: "PaymentQRs",
+                column: "FilePath",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Payments_AppointmentId",
                 table: "Payments",
                 column: "AppointmentId",
@@ -475,6 +495,9 @@ namespace E_Dukate.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "MedicalDocuments");
+
+            migrationBuilder.DropTable(
+                name: "PaymentQRs");
 
             migrationBuilder.DropTable(
                 name: "Payments");

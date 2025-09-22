@@ -69,8 +69,8 @@ public static class DependencyInjection
         services.AddScoped<IGenericRepository<Appointment>, GenericRepository<Appointment>>();
         services.AddScoped<IGenericRepository<ScheduledSession>, GenericRepository<ScheduledSession>>();
         services.AddScoped<IGenericRepository<Payment>, GenericRepository<Payment>>();
-        services.AddScoped<IGenericRepository<Specialist>, GenericRepository<Specialist>>();
         services.AddScoped<IGenericRepository<MedicalDocument>, GenericRepository<MedicalDocument>>();
+        services.AddScoped<IGenericRepository<PaymentQR>, GenericRepository<PaymentQR>>();
         return services;
     }
 
@@ -100,6 +100,7 @@ public static class DependencyInjection
         services.AddScoped<ShowSchedulesHandler>();
         services.AddScoped<AppointmentService>();
         services.AddScoped<PaymentService>();
+        services.AddScoped<PaymentQRService>();
         services.AddScoped<MedicalHistoryMetricsService>();
         services.AddScoped<DemographicMetricsService>();
         services.AddScoped<PaymentMetricsService>();

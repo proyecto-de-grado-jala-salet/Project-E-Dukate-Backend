@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace E_Dukate.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250728210346_InitialCreate")]
+    [Migration("20250906162431_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -304,6 +304,31 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.HasIndex("SpecialistId");
 
                     b.ToTable("Payments", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Payments.PaymentQR", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UploadDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FilePath")
+                        .IsUnique();
+
+                    b.ToTable("PaymentQRs", (string)null);
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.Schedule", b =>

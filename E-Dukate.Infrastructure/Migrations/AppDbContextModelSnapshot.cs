@@ -303,6 +303,31 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.ToTable("Payments", (string)null);
                 });
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Payments.PaymentQR", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UploadDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FilePath")
+                        .IsUnique();
+
+                    b.ToTable("PaymentQRs", (string)null);
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.Schedules.Schedule", b =>
                 {
                     b.Property<Guid>("Id")

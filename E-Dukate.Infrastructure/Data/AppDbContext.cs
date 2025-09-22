@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using E_Dukate.Domain.Entities.Users;
 using E_Dukate.Domain.Entities.Specialties;
 using E_Dukate.Domain.Entities.Schedules;
@@ -27,6 +26,7 @@ public class AppDbContext : DbContext
     public DbSet<Appointment> Appointments { get; set; }
     public DbSet<ScheduledSession> ScheduledSessions { get; set; }
     public DbSet<Payment> Payments { get; set; }
+    public DbSet<PaymentQR> PaymentQRs { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -46,6 +46,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Appointment>().ToTable("Appointments").HasKey(a => a.Id);
         modelBuilder.Entity<ScheduledSession>().ToTable("ScheduledSessions").HasKey(ss => ss.Id);
         modelBuilder.Entity<Payment>().ToTable("Payments").HasKey(p => p.Id);
+        modelBuilder.Entity<PaymentQR>().ToTable("PaymentQRs").HasKey(qr => qr.Id);
 
         modelBuilder.Entity<Patient>()
             .HasOne(p => p.MedicalHistory)
@@ -153,5 +154,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Payment>()
             .Property(p => p.Status)
             .HasConversion<string>();
+
+        modelBuilder.Entity<PaymentQR>()
+            .HasIndex(qr => qr.FilePath)
+            .IsUnique();
     }
 }
