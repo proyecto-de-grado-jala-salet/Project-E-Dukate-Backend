@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Mvc;
 using E_Dukate.Application.Services.Appointments;
 using E_Dukate.Application.DTOs.Appointments;
 using E_Dukate.Application.DTOs.Common;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace E_Dukate.Presentation.Controllers.Appointments;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class AppointmentsController : ControllerBase
 {
     private readonly AppointmentService _appointmentService;
@@ -16,7 +19,19 @@ public class AppointmentsController : ControllerBase
         _appointmentService = appointmentService;
     }
 
+    private Guid? GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+        return userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId) ? userId : null;
+    }
+
+    private bool IsAdministrator()
+    {
+        return User.IsInRole("Administrator");
+    }
+
     [HttpPost]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Create([FromBody] AppointmentDto dto)
     {
         var result = await _appointmentService.CreateAppointmentAsync(dto);
@@ -27,6 +42,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Update(Guid id, [FromBody] AppointmentDto dto)
     {
         var result = await _appointmentService.UpdateAppointmentAsync(id, dto);
@@ -46,6 +62,18 @@ public class AppointmentsController : ControllerBase
         var appointment = await _appointmentService.GetAppointmentByIdAsync(id);
         if (appointment == null)
             return NotFound();
+        
+        if (!IsAdministrator())
+        {
+            var currentUserId = GetCurrentUserId();
+            var dynamicAppointment = appointment as dynamic;
+            Guid appointmentSpecialistId = dynamicAppointment.SpecialistId;
+
+            if (!currentUserId.HasValue || appointmentSpecialistId != currentUserId.Value)
+            {
+                return Forbid("No tienes permisos para ver esta cita.");
+            }
+        }
 
         return Ok(appointment);
     }
@@ -59,6 +87,15 @@ public class AppointmentsController : ControllerBase
         [FromQuery] string? patientSearch,
         [FromQuery] PaginationParams pagination)
     {
+        if (!IsAdministrator())
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId.HasValue)
+            {
+                specialistId = currentUserId.Value;
+            }
+        }
+
         var result = await _appointmentService.GetAppointmentsAsync(patientId, specialistId, date, status, patientSearch, pagination);
         if (!result.IsSuccess)
         {
@@ -77,8 +114,26 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPost("{id}/sessions/{sessionId}/confirm")]
+    [Authorize(Roles = "Administrator,Specialist")]
     public async Task<IActionResult> ConfirmSession(Guid id, Guid sessionId)
     {
+        if (!IsAdministrator())
+        {
+            var currentUserId = GetCurrentUserId();
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(id);
+            
+            if (appointment != null)
+            {
+                var dynamicAppointment = appointment as dynamic;
+                Guid appointmentSpecialistId = dynamicAppointment.SpecialistId;
+                
+                if (!currentUserId.HasValue || appointmentSpecialistId != currentUserId.Value)
+                {
+                    return Forbid("No tienes permisos para confirmar sesiones de esta cita.");
+                }
+            }
+        }
+
         var result = await _appointmentService.ConfirmSessionAsync(id, sessionId);
         if (!result.IsSuccess)
         {
@@ -91,10 +146,28 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("appointment/{appointmentId}/cancel-session/{sessionId}")]
+    [Authorize(Roles = "Administrator,Specialist")]
     public async Task<IActionResult> CancelSession(
         Guid appointmentId,
         Guid sessionId)
     {
+        if (!IsAdministrator())
+        {
+            var currentUserId = GetCurrentUserId();
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId);
+            
+            if (appointment != null)
+            {
+                var dynamicAppointment = appointment as dynamic;
+                Guid appointmentSpecialistId = dynamicAppointment.SpecialistId;
+                
+                if (!currentUserId.HasValue || appointmentSpecialistId != currentUserId.Value)
+                {
+                    return Forbid("No tienes permisos para cancelar sesiones de esta cita.");
+                }
+            }
+        }
+
         var result = await _appointmentService.CancelSessionAsync(appointmentId, sessionId);
         if (!result.IsSuccess)
             return BadRequest(new { Error = result.ErrorMessage });
@@ -103,10 +176,28 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("reschedule-session/{appointmentId}")]
+    [Authorize(Roles = "Administrator,Specialist")]
     public async Task<IActionResult> RescheduleSession(
         Guid appointmentId,
         [FromBody] RescheduleSessionDto dto)
     {
+        if (!IsAdministrator())
+        {
+            var currentUserId = GetCurrentUserId();
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId);
+            
+            if (appointment != null)
+            {
+                var dynamicAppointment = appointment as dynamic;
+                Guid appointmentSpecialistId = dynamicAppointment.SpecialistId;
+                
+                if (!currentUserId.HasValue || appointmentSpecialistId != currentUserId.Value)
+                {
+                    return Forbid("No tienes permisos para reprogramar sesiones de esta cita.");
+                }
+            }
+        }
+
         var result = await _appointmentService.RescheduleSessionAsync(appointmentId, dto);
         if (!result.IsSuccess)
             return BadRequest(new { Error = result.ErrorMessage });

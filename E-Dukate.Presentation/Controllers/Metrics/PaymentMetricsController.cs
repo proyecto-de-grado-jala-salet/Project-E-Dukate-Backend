@@ -1,10 +1,12 @@
 using E_Dukate.Application.Services.Metrics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace E_Dukate.Presentation.Controllers.Metrics;
 
 [ApiController]
 [Route("api/metrics/payments")]
+[Authorize]
 public class PaymentMetricsController : ControllerBase
 {
     private readonly PaymentMetricsService _paymentMetricsService;
@@ -15,6 +17,7 @@ public class PaymentMetricsController : ControllerBase
     }
 
     [HttpGet("total-income")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> GetTotalIncomeByPeriod(
         [FromQuery] string? periodType = null,
         [FromQuery] DateTime? startDate = null,
@@ -43,6 +46,7 @@ public class PaymentMetricsController : ControllerBase
     }
 
     [HttpGet("pending-vs-completed")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> GetPendingVsCompletedPayments(
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null)
@@ -66,6 +70,7 @@ public class PaymentMetricsController : ControllerBase
     }
 
     [HttpGet("status-counts")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> GetPaymentStatusCounts(
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null)
@@ -89,6 +94,7 @@ public class PaymentMetricsController : ControllerBase
     }
 
     [HttpGet("institution-earnings")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> GetInstitutionEarnings(
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null)
@@ -112,6 +118,7 @@ public class PaymentMetricsController : ControllerBase
     }
 
     [HttpGet("available-years")]
+    [Authorize(Roles = "Administrator")]
     public async Task<ActionResult<List<int>>> GetAvailableYears()
     {
         var years = await _paymentMetricsService.GetAvailableYearsAsync();

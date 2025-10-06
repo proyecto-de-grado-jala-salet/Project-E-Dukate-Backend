@@ -45,6 +45,15 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+var portVar = Environment.GetEnvironmentVariable("PORT");
+if (portVar is { Length: > 0 } && int.TryParse(portVar, out var port))
+{
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.ListenAnyIP(port);
+    });
+}
+
 var app = builder.Build();
 
 app.UseCorsConfiguration()

@@ -2,11 +2,14 @@ using E_Dukate.Application.DTOs.Common;
 using E_Dukate.Application.DTOs.Payments;
 using E_Dukate.Application.Services.Payments;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace E_Dukate.Presentation.Controllers.Payments;
 
 [ApiController]
 [Route("api/payments")]
+[Authorize]
 public class PaymentsController : ControllerBase
 {
     private readonly PaymentService _paymentService;
@@ -16,9 +19,29 @@ public class PaymentsController : ControllerBase
         _paymentService = paymentService;
     }
 
+    private Guid? GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+        return userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId) ? userId : null;
+    }
+
+    private bool IsAdministrator()
+    {
+        return User.IsInRole("Administrator");
+    }
+
     [HttpGet("filter")]
     public async Task<IActionResult> GetFilteredPayments([FromQuery] PaymentFilterDto filter)
     {
+        if (!IsAdministrator())
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId.HasValue)
+            {
+                filter.SpecialistId = currentUserId.Value;
+            }
+        }
+
         var (payments, totalCount) = await _paymentService.GetFilteredPaymentsAsync(filter);
 
         var response = new
@@ -50,6 +73,7 @@ public class PaymentsController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> UpdatePayment(Guid id, [FromBody] PaymentDto dto)
     {
         var result = await _paymentService.UpdatePaymentAsync(id, dto);
@@ -64,6 +88,7 @@ public class PaymentsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> DeletePayment(Guid id)
     {
         var result = await _paymentService.DeletePaymentAsync(id);
@@ -79,6 +104,15 @@ public class PaymentsController : ControllerBase
         var payment = await _paymentService.GetPaymentByIdAsync(id);
         if (payment == null)
             return NotFound();
+        
+        if (!IsAdministrator())
+        {
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue || payment.SpecialistId != currentUserId.Value)
+            {
+                return Forbid("No tienes permisos para ver este pago.");
+            }
+        }
 
         return Ok(new
         {
@@ -102,7 +136,22 @@ public class PaymentsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetPayments([FromQuery] PaginationParams pagination)
     {
-        var (payments, totalCount) = await _paymentService.GetPaymentsAsync(pagination);
+        var filter = new PaymentFilterDto
+        {
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize
+        };
+
+        if (!IsAdministrator())
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId.HasValue)
+            {
+                filter.SpecialistId = currentUserId.Value;
+            }
+        }
+
+        var (payments, totalCount) = await _paymentService.GetFilteredPaymentsAsync(filter);
 
         var response = new
         {

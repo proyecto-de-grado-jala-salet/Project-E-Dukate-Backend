@@ -4,6 +4,6 @@ public enum MedicalHistoryStatus
 {
     ContinuaEnTratamiento,
     AltaDefinitiva,
-    AltaTemporal,
+    AltaPorSolicitud,
     AltaAbandono
 }
