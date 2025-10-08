@@ -1,0 +1,8 @@
+{
+  "build": {
+    "builder": "Dockerfile"
+  },
+  "start": {
+    "cmd": "dotnet E-Dukate.Presentation.dll"
+  }
+}
