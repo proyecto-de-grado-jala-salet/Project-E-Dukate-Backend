@@ -6,6 +6,15 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var portVar = Environment.GetEnvironmentVariable("PORT");
+if (portVar is { Length: > 0 } && int.TryParse(portVar, out var port))
+{
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.ListenAnyIP(port);
+    });
+}
+
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
@@ -44,15 +53,6 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 });
-
-var portVar = Environment.GetEnvironmentVariable("PORT");
-if (portVar is { Length: > 0 } && int.TryParse(portVar, out var port))
-{
-    builder.WebHost.ConfigureKestrel(options =>
-    {
-        options.ListenAnyIP(port);
-    });
-}
 
 var app = builder.Build();
 

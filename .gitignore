@@ -87,7 +87,5 @@ Dockerfile.user
 
 # Environment files
 .env
-appsettings.*.json
-appsettings.json
 
 credentials.json
