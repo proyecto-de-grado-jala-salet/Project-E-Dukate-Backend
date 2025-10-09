@@ -6,11 +6,15 @@ public static class CorsConfiguration
     {
         services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy =>
+            options.AddPolicy("AllowSpecificOrigins", policy =>
             {
-                policy.WithOrigins("http://localhost:3000")
-                      .AllowAnyMethod()
-                      .AllowAnyHeader();
+                policy.WithOrigins(
+                        "http://localhost:3000",
+                        "https://e-dukate.up.railway.app"
+                    )
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();
             });
         });
         return services;
@@ -18,7 +22,7 @@ public static class CorsConfiguration
 
     public static IApplicationBuilder UseCorsConfiguration(this IApplicationBuilder app)
     {
-        app.UseCors("AllowAll");
+        app.UseCors("AllowSpecificOrigins");
         return app;
     }
 }
