@@ -206,6 +206,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPost("preview")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAppointmentPreview([FromBody] AppointmentDto dto)
     {
         var result = await _appointmentService.GetAppointmentPreviewAsync(dto);
