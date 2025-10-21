@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<ScheduledSession> ScheduledSessions { get; set; }
     public DbSet<Payment> Payments { get; set; }
     public DbSet<PaymentQR> PaymentQRs { get; set; }
+    public DbSet<TemporaryAppointment> TemporaryAppointment { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -47,6 +48,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ScheduledSession>().ToTable("ScheduledSessions").HasKey(ss => ss.Id);
         modelBuilder.Entity<Payment>().ToTable("Payments").HasKey(p => p.Id);
         modelBuilder.Entity<PaymentQR>().ToTable("PaymentQRs").HasKey(qr => qr.Id);
+        modelBuilder.Entity<TemporaryAppointment>().ToTable("TemporaryAppointment").HasKey(ta => ta.Id);
 
         modelBuilder.Entity<Patient>()
             .HasOne(p => p.MedicalHistory)
@@ -158,5 +160,27 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<PaymentQR>()
             .HasIndex(qr => qr.FilePath)
             .IsUnique();
+
+        modelBuilder.Entity<TemporaryAppointment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            
+            entity.Property(e => e.WhatsAppNumber)
+                .IsRequired()
+                .HasMaxLength(20);
+                
+            entity.Property(e => e.AppointmentData)
+                .IsRequired();
+                
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(20);
+                
+            entity.Property(e => e.CreatedAt)
+                .IsRequired();
+                
+            entity.Property(e => e.ExpiresAt)
+                .IsRequired();
+        });
     }
 }

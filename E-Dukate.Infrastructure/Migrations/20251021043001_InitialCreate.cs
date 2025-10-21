@@ -96,6 +96,27 @@ namespace E_Dukate.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TemporaryAppointment",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    WhatsAppNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    AppointmentData = table.Column<string>(type: "text", nullable: false),
+                    ComprobanteUrl = table.Column<string>(type: "text", nullable: true),
+                    ComprobanteFileName = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsProcessed = table.Column<bool>(type: "boolean", nullable: false),
+                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    PaymentUploadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ProcessedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TemporaryAppointment", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UserAuths",
                 columns: table => new
                 {
@@ -504,6 +525,9 @@ namespace E_Dukate.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "ScheduledSessions");
+
+            migrationBuilder.DropTable(
+                name: "TemporaryAppointment");
 
             migrationBuilder.DropTable(
                 name: "UserAuths");

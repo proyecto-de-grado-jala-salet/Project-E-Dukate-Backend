@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace E_Dukate.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250906162431_InitialCreate")]
+    [Migration("20251021043001_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -86,6 +86,52 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.HasIndex("TimeSlotId");
 
                     b.ToTable("ScheduledSessions", (string)null);
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Appointments.TemporaryAppointment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AppointmentData")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ComprobanteFileName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ComprobanteUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsProcessed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("PaymentUploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("WhatsAppNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TemporaryAppointment", (string)null);
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.Auth.LoginLog", b =>
