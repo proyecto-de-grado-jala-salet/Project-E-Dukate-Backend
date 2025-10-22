@@ -84,8 +84,12 @@ public class PaymentQRsController : ControllerBase
             {
                 return NotFound("QR file URL not found.");
             }
-            
-            return Redirect(qr.FilePath);
+
+            return Ok(new
+            {
+                url = qr.FilePath,
+                fileName = qr.FileName
+            });
         }
         catch (Exception ex)
         {
