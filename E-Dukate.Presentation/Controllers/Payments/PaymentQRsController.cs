@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using E_Dukate.Application.Services.Payments;
+using E_Dukate.Infrastructure.Services.CloudinaryFile;
 
 namespace E_Dukate.Presentation.Controllers.Payments;
 
@@ -10,16 +11,14 @@ namespace E_Dukate.Presentation.Controllers.Payments;
 public class PaymentQRsController : ControllerBase
 {
     private readonly PaymentQRService _paymentQRService;
-    private readonly IWebHostEnvironment _environment;
-    private readonly string _uploadsFolder;
+    private readonly ICloudinaryService _cloudinaryService;
 
     public PaymentQRsController(
         PaymentQRService paymentQRService,
-        IWebHostEnvironment environment)
+        ICloudinaryService cloudinaryService)
     {
         _paymentQRService = paymentQRService;
-        _environment = environment;
-        _uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "AppointmentPayments");
+        _cloudinaryService = cloudinaryService;
     }
 
     [HttpPost]
@@ -42,37 +41,22 @@ public class PaymentQRsController : ControllerBase
                 return BadRequest("Invalid file type. Only JPG, JPEG, PNG, and WebP are allowed.");
             }
 
-            if (!Directory.Exists(_uploadsFolder))
-            {
-                Directory.CreateDirectory(_uploadsFolder);
-            }
-
-            var existingFiles = Directory.GetFiles(_uploadsFolder);
-            if (existingFiles.Any())
+            var existingQRResult = await _paymentQRService.GetQRAsync();
+            if (existingQRResult.IsSuccess)
             {
                 return BadRequest("A QR code already exists. Please update or delete the existing one.");
             }
 
-            var uniqueFileName = Guid.NewGuid().ToString() + fileExtension;
-            var filePath = Path.Combine(_uploadsFolder, uniqueFileName);
+            var imageUrl = await _cloudinaryService.UploadImageAsync(file, "payment-qrs");
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            var result = await _paymentQRService.CreateQRAsync(uniqueFileName, filePath);
+            var result = await _paymentQRService.CreateQRAsync(file.FileName, imageUrl);
             if (!result.IsSuccess)
             {
-                if (System.IO.File.Exists(filePath))
-                {
-                    System.IO.File.Delete(filePath);
-                }
                 return BadRequest(result.ErrorMessage);
             }
 
             return Ok(new { 
-                QRId = uniqueFileName,
+                QRId = imageUrl,
                 Message = "QR code uploaded successfully" 
             });
         }
@@ -95,25 +79,13 @@ public class PaymentQRsController : ControllerBase
             }
 
             var qr = result.Value!;
-            var filePath = qr.FilePath;
-            
-            if (!System.IO.File.Exists(filePath))
+
+            if (string.IsNullOrEmpty(qr.FilePath))
             {
-                await _paymentQRService.DeleteQRAsync();
-                return NotFound("QR file not found on server.");
+                return NotFound("QR file URL not found.");
             }
-
-            var fileExtension = Path.GetExtension(filePath).ToLower();
-            var contentType = fileExtension switch
-            {
-                ".jpg" or ".jpeg" => "image/jpeg",
-                ".png" => "image/png",
-                ".webp" => "image/webp",
-                _ => "application/octet-stream"
-            };
-
-            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
-            return File(fileBytes, contentType, qr.FileName);
+            
+            return Redirect(qr.FilePath);
         }
         catch (Exception ex)
         {
@@ -140,38 +112,19 @@ public class PaymentQRsController : ControllerBase
                 return BadRequest("Invalid file type. Only JPG, JPEG, PNG, and WebP are allowed.");
             }
 
-            if (!Directory.Exists(_uploadsFolder))
-            {
-                Directory.CreateDirectory(_uploadsFolder);
-            }
-
             var existingQRResult = await _paymentQRService.GetQRAsync();
             if (!existingQRResult.IsSuccess)
             {
                 return NotFound(existingQRResult.ErrorMessage);
             }
 
-            var existingFilePath = existingQRResult.Value!.FilePath;
-            if (System.IO.File.Exists(existingFilePath))
-            {
-                System.IO.File.Delete(existingFilePath);
-            }
+            var existingQR = existingQRResult.Value!;
+            
+            var newImageUrl = await _cloudinaryService.UploadImageAsync(file, "payment-qrs");
 
-            var uniqueFileName = Guid.NewGuid().ToString() + fileExtension;
-            var newFilePath = Path.Combine(_uploadsFolder, uniqueFileName);
-
-            using (var stream = new FileStream(newFilePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            var updateResult = await _paymentQRService.UpdateQRAsync(uniqueFileName, newFilePath);
+            var updateResult = await _paymentQRService.UpdateQRAsync(file.FileName, newImageUrl);
             if (!updateResult.IsSuccess)
             {
-                if (System.IO.File.Exists(newFilePath))
-                {
-                    System.IO.File.Delete(newFilePath);
-                }
                 return BadRequest(updateResult.ErrorMessage);
             }
 
@@ -195,10 +148,9 @@ public class PaymentQRsController : ControllerBase
                 return NotFound(existingQRResult.ErrorMessage);
             }
 
-            if (System.IO.File.Exists(existingQRResult.Value!.FilePath))
-            {
-                System.IO.File.Delete(existingQRResult.Value!.FilePath);
-            }
+            var existingQR = existingQRResult.Value!;
+            
+            await _cloudinaryService.DeleteFileAsync(existingQR.FilePath);
 
             var result = await _paymentQRService.DeleteQRAsync();
             if (!result.IsSuccess)

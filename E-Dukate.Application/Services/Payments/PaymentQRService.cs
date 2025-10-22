@@ -14,7 +14,7 @@ public class PaymentQRService
         _paymentQRRepository = paymentQRRepository;
     }
 
-    public async Task<Result> CreateQRAsync(string fileName, string filePath)
+    public async Task<Result> CreateQRAsync(string fileName, string fileUrl)
     {
         var existingQR = await _paymentQRRepository.GetAll().FirstOrDefaultAsync();
         if (existingQR != null)
@@ -22,9 +22,9 @@ public class PaymentQRService
             return Result.Failure("A QR code already exists. Please update or delete the existing one.");
         }
 
-        if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(filePath))
+        if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(fileUrl))
         {
-            return Result.Failure("Invalid file name or path.");
+            return Result.Failure("Invalid file name or URL.");
         }
 
         try
@@ -32,7 +32,7 @@ public class PaymentQRService
             var paymentQR = new PaymentQR
             {
                 FileName = fileName,
-                FilePath = filePath,
+                FilePath = fileUrl,
                 UploadDate = DateTime.UtcNow
             };
 

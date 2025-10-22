@@ -38,6 +38,7 @@ using E_Dukate.Application.DTOs.Payments;
 using E_Dukate.Application.Validators.Appointments;
 using E_Dukate.Application.Validators.Payments;
 using E_Dukate.Application.Services.Metrics;
+using E_Dukate.Infrastructure.Services.CloudinaryFile;
 
 namespace E_Dukate.Presentation.Configuration;
 
@@ -108,6 +109,7 @@ public static class DependencyInjection
         services.AddScoped<TemporaryAppointmentService>();
         services.AddScoped<FileStorageService>();
         services.AddSingleton<IConversationStateManager, ConversationStateManager>();
+        services.AddScoped<ICloudinaryService, CloudinaryService>();
         return services;
     }
 

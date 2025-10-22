@@ -4,12 +4,11 @@ using E_Dukate.Application.DTOs.MedicalHistories;
 using E_Dukate.Application.Services.MedicalHistories;
 using System.Security.Claims;
 using E_Dukate.Application.DTOs.Common;
-using Microsoft.AspNetCore.Http;
-using System.IO;
 using E_Dukate.Domain.Entities.MedicalHistories;
 using E_Dukate.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using E_Dukate.Infrastructure.Data;
+using E_Dukate.Infrastructure.Services.CloudinaryFile;
 
 namespace E_Dukate.Presentation.Controllers.MedicalHistories;
 
@@ -22,6 +21,7 @@ public class MedicalConsultationsController : ControllerBase
     private readonly IGenericRepository<MedicalDocument> _documentRepository;
     private readonly IGenericRepository<MedicalHistoryPermission> _permissionRepository;
     private readonly IWebHostEnvironment _environment;
+    private readonly ICloudinaryService _cloudinaryService;
     private readonly AppDbContext _context;
 
     public MedicalConsultationsController(
@@ -29,12 +29,14 @@ public class MedicalConsultationsController : ControllerBase
         IGenericRepository<MedicalDocument> documentRepository,
         IGenericRepository<MedicalHistoryPermission> permissionRepository,
         IWebHostEnvironment environment,
+        ICloudinaryService cloudinaryService,
         AppDbContext context)
     {
         _medicalConsultationService = medicalConsultationService;
         _documentRepository = documentRepository;
         _permissionRepository = permissionRepository;
         _environment = environment;
+        _cloudinaryService = cloudinaryService;
         _context = context;
     }
 
@@ -143,28 +145,22 @@ public class MedicalConsultationsController : ControllerBase
 
             var patientId = medicalHistory.PatientId;
             var specialistId = permission.SpecialistId;
-            var documentId = Guid.NewGuid();
-            var fileName = file.FileName;
-            var filePath = Path.Combine("MedicalFiles", patientId.ToString(), specialistId.ToString(), $"{documentId}.pdf");
-
-            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
+            
+            var folder = $"medical-documents/patient-{patientId}/specialist-{specialistId}";
+            var fileUrl = await _cloudinaryService.UploadPdfAsync(file, folder);
 
             var document = new MedicalDocument
             {
                 PermissionId = permissionId,
-                FileName = fileName,
-                FilePath = filePath,
+                FileName = file.FileName,
+                FilePath = fileUrl,
                 UploadDate = DateTime.UtcNow
             };
 
             _context.MedicalDocuments.Add(document);
             await _context.SaveChangesAsync();
 
-            return Ok(new { DocumentId = documentId.ToString() });
+            return Ok(new { DocumentId = document.Id.ToString() });
         }
         catch (Exception ex)
         {
@@ -189,6 +185,11 @@ public class MedicalConsultationsController : ControllerBase
                 return NotFound("Documento no encontrado.");
             }
 
+            if (string.IsNullOrEmpty(document.FilePath))
+            {
+                return NotFound("El documento no tiene una URL válida.");
+            }
+
             if (User.IsInRole("Specialist"))
             {
                 var medicalHistoryId = document.Permission!.MedicalHistoryId;
@@ -201,14 +202,7 @@ public class MedicalConsultationsController : ControllerBase
                 }
             }
 
-            var filePath = document.FilePath;
-            if (!System.IO.File.Exists(filePath))
-            {
-                return NotFound("Archivo no encontrado en el servidor.");
-            }
-
-            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
-            return File(fileBytes, "application/pdf", document.FileName);
+            return Redirect(document.FilePath);
         }
         catch (Exception ex)
         {
@@ -244,15 +238,10 @@ public class MedicalConsultationsController : ControllerBase
                     return Unauthorized("You do not have editing permissions.");
                 }
             }
-
-            if (System.IO.File.Exists(document.FilePath))
+            
+            if (!string.IsNullOrEmpty(document.FilePath))
             {
-                System.IO.File.Delete(document.FilePath);
-                Console.WriteLine($"DeleteDocument - File deleted: {document.FilePath}");
-            }
-            else
-            {
-                Console.WriteLine($"DeleteDocument - File not found: {document.FilePath}");
+                await _cloudinaryService.DeleteFileAsync(document.FilePath);
             }
 
             await _documentRepository.DeleteAsync(documentId);
