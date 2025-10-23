@@ -119,6 +119,11 @@ public class PaymentQRsController : ControllerBase
             }
 
             var existingQR = existingQRResult.Value!;
+
+            if (!string.IsNullOrEmpty(existingQR.FilePath))
+            {
+                await _cloudinaryService.DeleteFileAsync(existingQR.FilePath);
+            }
             
             var newImageUrl = await _cloudinaryService.UploadImageAsync(file, "payment-qrs");
 
