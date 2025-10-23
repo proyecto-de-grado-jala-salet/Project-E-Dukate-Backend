@@ -201,12 +201,8 @@ public class MedicalConsultationsController : ControllerBase
                     return Forbid("No tienes permisos para ver este documento.");
                 }
             }
-            
-            return Ok(new
-            {
-                url = document.FilePath,
-                fileName = document.FileName
-            });
+
+            return Redirect(document.FilePath);
         }
         catch (Exception ex)
         {
@@ -242,7 +238,7 @@ public class MedicalConsultationsController : ControllerBase
                     return Unauthorized("You do not have editing permissions.");
                 }
             }
-
+            
             if (!string.IsNullOrEmpty(document.FilePath))
             {
                 await _cloudinaryService.DeleteFileAsync(document.FilePath);
