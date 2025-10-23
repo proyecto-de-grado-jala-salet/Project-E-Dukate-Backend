@@ -39,6 +39,7 @@ using E_Dukate.Application.Validators.Appointments;
 using E_Dukate.Application.Validators.Payments;
 using E_Dukate.Application.Services.Metrics;
 using E_Dukate.Infrastructure.Services.CloudinaryFile;
+using E_Dukate.Infrastructure.Services.TemporaryAppointment;
 
 namespace E_Dukate.Presentation.Configuration;
 
@@ -73,6 +74,7 @@ public static class DependencyInjection
         services.AddScoped<IGenericRepository<MedicalDocument>, GenericRepository<MedicalDocument>>();
         services.AddScoped<IGenericRepository<PaymentQR>, GenericRepository<PaymentQR>>();
         services.AddScoped<ITemporaryAppointmentRepository, TemporaryAppointmentRepository>();
+        services.AddScoped<IGenericRepository<TemporaryPatient>, GenericRepository<TemporaryPatient>>();
         return services;
     }
 
@@ -107,7 +109,7 @@ public static class DependencyInjection
         services.AddScoped<DemographicMetricsService>();
         services.AddScoped<PaymentMetricsService>();
         services.AddScoped<TemporaryAppointmentService>();
-        services.AddScoped<FileStorageService>();
+        services.AddScoped<TemporaryPatientService>();
         services.AddSingleton<IConversationStateManager, ConversationStateManager>();
         services.AddScoped<ICloudinaryService, CloudinaryService>();
         return services;
@@ -125,6 +127,7 @@ public static class DependencyInjection
         services.AddScoped<UserAuthValidator>();
         services.AddScoped<IValidator<AppointmentDto>, AppointmentValidator>();
         services.AddScoped<IValidator<PaymentDto>, PaymentValidator>();
+        services.AddScoped<IValidator<TemporaryPatientDto>, TemporaryPatientDtoValidator>();
         return services;
     }
 

@@ -1,27 +1,28 @@
 using E_Dukate.Application.DTOs.Appointments;
-using E_Dukate.Domain.Entities.Appointments;
 using E_Dukate.Domain.Interfaces;
 using E_Dukate.Domain.Primitives;
+using E_Dukate.Infrastructure.Services.CloudinaryFile;
 using System.Text.Json;
 
-namespace E_Dukate.Application.Services.Appointments;
+
+namespace E_Dukate.Infrastructure.Services.TemporaryAppointment;
 
 public class TemporaryAppointmentService
 {
     private readonly ITemporaryAppointmentRepository _temporaryAppointmentRepository;
-    private readonly FileStorageService _fileStorageService;
+    private readonly ICloudinaryService _cloudinaryService;
 
     public TemporaryAppointmentService(
         ITemporaryAppointmentRepository temporaryAppointmentRepository,
-        FileStorageService fileStorageService)
+        ICloudinaryService cloudinaryService)
     {
         _temporaryAppointmentRepository = temporaryAppointmentRepository;
-        _fileStorageService = fileStorageService;
+        _cloudinaryService = cloudinaryService;
     }
 
     public async Task<Guid> CreateTemporaryAppointmentAsync(CreateTemporaryAppointmentRequestDto request)
     {
-        var temporaryAppointment = new TemporaryAppointment
+        var temporaryAppointment = new Domain.Entities.Appointments.TemporaryAppointment
         {
             WhatsAppNumber = request.WhatsAppNumber,
             AppointmentData = JsonSerializer.Serialize(request.AppointmentData, new JsonSerializerOptions
@@ -89,17 +90,38 @@ public class TemporaryAppointmentService
                 return Result.Failure("Cita temporal no encontrada");
 
             if (appointment.IsProcessed)
-                return Result.Failure("Esta cita ya ha sido procesada");
+                return Result.Failure("La cita ya ha sido procesada");
 
-            if (appointment.ExpiresAt < DateTime.UtcNow)
-                return Result.Failure("Esta cita ha expirado");
+            // Validar archivo
+            if (request.Comprobante == null || request.Comprobante.Length == 0)
+                return Result.Failure("Archivo no válido");
 
-            var filePath = await _fileStorageService.SaveComprobanteAsync(request.Comprobante, appointment.Id);
-            
-            appointment.ComprobanteUrl = filePath;
+            // Validar tipo de archivo
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf", ".gif" };
+            var fileExtension = Path.GetExtension(request.Comprobante.FileName).ToLowerInvariant();
+            if (!allowedExtensions.Contains(fileExtension))
+                return Result.Failure("Tipo de archivo no permitido. Use JPG, PNG, PDF o GIF.");
+
+            // Validar tamaño (máximo 5MB)
+            if (request.Comprobante.Length > 5 * 1024 * 1024)
+                return Result.Failure("El archivo no puede ser mayor a 5MB");
+
+            // Subir a Cloudinary
+            string comprobanteUrl;
+            if (fileExtension == ".pdf")
+            {
+                comprobanteUrl = await _cloudinaryService.UploadPdfAsync(request.Comprobante, "comprobantes");
+            }
+            else
+            {
+                comprobanteUrl = await _cloudinaryService.UploadImageAsync(request.Comprobante, "comprobantes");
+            }
+
+            // Actualizar la cita temporal
+            appointment.ComprobanteUrl = comprobanteUrl;
             appointment.ComprobanteFileName = request.Comprobante.FileName;
-            appointment.Status = "Payment_Uploaded";
             appointment.PaymentUploadedAt = DateTime.UtcNow;
+            appointment.Status = "Payment_Uploaded";
 
             await _temporaryAppointmentRepository.UpdateAsync(appointment);
 

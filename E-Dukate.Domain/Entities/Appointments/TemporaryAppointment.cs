@@ -1,5 +1,3 @@
-using E_Dukate.Domain.Primitives;
-
 namespace E_Dukate.Domain.Entities.Appointments;
 
 public class TemporaryAppointment : Primitives.Entity

@@ -1,5 +1,5 @@
 using E_Dukate.Application.DTOs.Appointments;
-using E_Dukate.Application.Services.Appointments;
+using E_Dukate.Infrastructure.Services.TemporaryAppointment;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
