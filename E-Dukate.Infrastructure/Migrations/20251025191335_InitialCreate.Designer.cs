@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace E_Dukate.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251023095812_InitialCreate")]
+    [Migration("20251025191335_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -592,6 +592,82 @@ namespace E_Dukate.Infrastructure.Migrations
                     b.ToTable("Specialists", (string)null);
                 });
 
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Users.TemporaryPatient", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Age")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("DateOfBirth")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Gender")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("IdentityCard")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastNameMaternal")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("LastNamePaternal")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("MobileNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Names")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("RealPatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("WhatsAppNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("RealPatientId");
+
+                    b.HasIndex("WhatsAppNumber");
+
+                    b.ToTable("TemporaryPatient", (string)null);
+                });
+
             modelBuilder.Entity("E_Dukate.Domain.Entities.Appointments.Appointment", b =>
                 {
                     b.HasOne("E_Dukate.Domain.Entities.Users.Patient", "Patient")
@@ -756,6 +832,14 @@ namespace E_Dukate.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Specialty");
+                });
+
+            modelBuilder.Entity("E_Dukate.Domain.Entities.Users.TemporaryPatient", b =>
+                {
+                    b.HasOne("E_Dukate.Domain.Entities.Users.TemporaryPatient", null)
+                        .WithMany()
+                        .HasForeignKey("RealPatientId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("E_Dukate.Domain.Entities.Appointments.Appointment", b =>

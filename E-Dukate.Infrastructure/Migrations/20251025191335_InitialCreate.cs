@@ -117,6 +117,38 @@ namespace E_Dukate.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TemporaryPatient",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    WhatsAppNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Names = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    LastNamePaternal = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    LastNameMaternal = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    MobileNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    IdentityCard = table.Column<int>(type: "integer", nullable: false),
+                    PhoneNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Age = table.Column<int>(type: "integer", nullable: false),
+                    Gender = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    DateOfBirth = table.Column<DateOnly>(type: "date", nullable: false),
+                    Address = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    IsConfirmed = table.Column<bool>(type: "boolean", nullable: false),
+                    RealPatientId = table.Column<Guid>(type: "uuid", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TemporaryPatient", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TemporaryPatient_TemporaryPatient_RealPatientId",
+                        column: x => x.RealPatientId,
+                        principalTable: "TemporaryPatient",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UserAuths",
                 columns: table => new
                 {
@@ -491,6 +523,21 @@ namespace E_Dukate.Infrastructure.Migrations
                 column: "SpecialtyId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TemporaryPatient_ExpiresAt",
+                table: "TemporaryPatient",
+                column: "ExpiresAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TemporaryPatient_RealPatientId",
+                table: "TemporaryPatient",
+                column: "RealPatientId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TemporaryPatient_WhatsAppNumber",
+                table: "TemporaryPatient",
+                column: "WhatsAppNumber");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TimeSlots_ScheduleId",
                 table: "TimeSlots",
                 column: "ScheduleId");
@@ -528,6 +575,9 @@ namespace E_Dukate.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "TemporaryAppointment");
+
+            migrationBuilder.DropTable(
+                name: "TemporaryPatient");
 
             migrationBuilder.DropTable(
                 name: "UserAuths");
