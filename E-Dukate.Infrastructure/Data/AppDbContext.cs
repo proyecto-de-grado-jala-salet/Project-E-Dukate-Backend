@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<Payment> Payments { get; set; }
     public DbSet<PaymentQR> PaymentQRs { get; set; }
     public DbSet<TemporaryAppointment> TemporaryAppointment { get; set; }
+    public DbSet<TemporaryPatient> TemporaryPatient { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -49,6 +50,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Payment>().ToTable("Payments").HasKey(p => p.Id);
         modelBuilder.Entity<PaymentQR>().ToTable("PaymentQRs").HasKey(qr => qr.Id);
         modelBuilder.Entity<TemporaryAppointment>().ToTable("TemporaryAppointment").HasKey(ta => ta.Id);
+        modelBuilder.Entity<TemporaryPatient>().ToTable("TemporaryPatient").HasKey(tp => tp.Id);
 
         modelBuilder.Entity<Patient>()
             .HasOne(p => p.MedicalHistory)
@@ -181,6 +183,70 @@ public class AppDbContext : DbContext
                 
             entity.Property(e => e.ExpiresAt)
                 .IsRequired();
+        });
+
+        modelBuilder.Entity<TemporaryPatient>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.WhatsAppNumber)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(e => e.Names)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(e => e.LastNamePaternal)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.LastNameMaternal)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.MobileNumber)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(e => e.IdentityCard)
+                .IsRequired();
+
+            entity.Property(e => e.PhoneNumber)
+                .HasMaxLength(20);
+
+            entity.Property(e => e.Age)
+                .IsRequired();
+
+            entity.Property(e => e.Gender)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(e => e.DateOfBirth)
+                .IsRequired();
+
+            entity.Property(e => e.Address)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(e => e.IsConfirmed)
+                .IsRequired();
+
+            entity.Property(e => e.RealPatientId);
+
+            entity.Property(e => e.CreatedAt)
+                .IsRequired();
+
+            entity.Property(e => e.ExpiresAt)
+                .IsRequired();
+            
+            entity.HasIndex(e => e.WhatsAppNumber);
+
+            entity.HasIndex(e => e.ExpiresAt);
+
+            entity.HasOne<TemporaryPatient>()
+                .WithMany()
+                .HasForeignKey(e => e.RealPatientId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
