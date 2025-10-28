@@ -10,23 +10,16 @@ namespace E_Dukate.Infrastructure.Services.GoogleCalendar;
 
 public class GoogleCalendarService : IGoogleCalendarService
 {
-    private readonly string _credentialsPath;
     private readonly string _calendarId;
     private readonly CalendarService _calendarService;
 
     public GoogleCalendarService(IConfiguration configuration)
     {
-        _credentialsPath = configuration["GoogleCalendar:CredentialsPath"]
-            ?? throw new ArgumentNullException("GoogleCalendar:CredentialsPath is missing.");
         _calendarId = configuration["GoogleCalendar:CalendarId"]
             ?? throw new ArgumentNullException("GoogleCalendar:CalendarId is missing.");
 
-        GoogleCredential credential;
-        using (var stream = new FileStream(_credentialsPath, FileMode.Open, FileAccess.Read))
-        {
-            credential = GoogleCredential.FromStream(stream)
-                .CreateScoped(CalendarService.Scope.Calendar);
-        }
+        GoogleCredential credential = GoogleCredential.GetApplicationDefault()
+            .CreateScoped(CalendarService.Scope.Calendar);
 
         _calendarService = new CalendarService(new BaseClientService.Initializer
         {
