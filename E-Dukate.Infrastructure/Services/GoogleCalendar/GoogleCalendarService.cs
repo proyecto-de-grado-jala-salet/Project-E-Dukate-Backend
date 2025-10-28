@@ -18,8 +18,39 @@ public class GoogleCalendarService : IGoogleCalendarService
         _calendarId = configuration["GoogleCalendar:CalendarId"]
             ?? throw new ArgumentNullException("GoogleCalendar:CalendarId is missing.");
 
-        GoogleCredential credential = GoogleCredential.GetApplicationDefault()
-            .CreateScoped(CalendarService.Scope.Calendar);
+        GoogleCredential credential;
+        
+        string? credentialsJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON");
+        
+        if (!string.IsNullOrEmpty(credentialsJson))
+        {
+            credential = GoogleCredential.FromJson(credentialsJson)
+                .CreateScoped(CalendarService.Scope.Calendar);
+        }
+        else
+        {
+            var credentialsPath = configuration["GoogleCalendar:CredentialsPath"];
+            if (string.IsNullOrEmpty(credentialsPath))
+            {
+                throw new InvalidOperationException(
+                    "No se encontraron credenciales de Google Calendar. " +
+                    "Configure la variable de entorno GOOGLE_APPLICATION_CREDENTIALS_JSON " +
+                    "o la configuración GoogleCalendar:CredentialsPath.");
+            }
+            
+            // Verificar que el archivo existe
+            if (!File.Exists(credentialsPath))
+            {
+                throw new FileNotFoundException(
+                    $"No se encontró el archivo de credenciales en: {credentialsPath}");
+            }
+            
+            using (var stream = new FileStream(credentialsPath, FileMode.Open, FileAccess.Read))
+            {
+                credential = GoogleCredential.FromStream(stream)
+                    .CreateScoped(CalendarService.Scope.Calendar);
+            }
+        }
 
         _calendarService = new CalendarService(new BaseClientService.Initializer
         {
