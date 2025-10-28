@@ -142,7 +142,7 @@ public static class DependencyInjection
 
     private static IServiceCollection AddGoogleCalendarServices(this IServiceCollection services)
     {
-        services.AddSingleton<IGoogleCalendarService, GoogleCalendarService>();
+        services.AddScoped<IGoogleCalendarService, GoogleCalendarService>();
         return services;
     }
 }

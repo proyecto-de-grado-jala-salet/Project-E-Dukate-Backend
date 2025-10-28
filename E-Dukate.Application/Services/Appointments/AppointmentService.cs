@@ -119,6 +119,7 @@ public class AppointmentService
             try
             {
                 var calendarResult = await _googleCalendarService.CreateAppointmentEventAsync(appointment);
+                Console.WriteLine("📅 Intentando crear evento en Google Calendar...");
                 if (!calendarResult)
                 {
                     Console.WriteLine("Advertencia: No se pudo crear el evento en Google Calendar, pero la cita fue guardada.");
