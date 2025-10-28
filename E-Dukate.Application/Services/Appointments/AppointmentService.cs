@@ -10,6 +10,7 @@ using E_Dukate.Domain.Primitives;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using E_Dukate.Application.Services.Payments;
+using E_Dukate.Application.Interfaces.GoogleCalendar;
 
 namespace E_Dukate.Application.Services.Appointments;
 
@@ -25,6 +26,7 @@ public class AppointmentService
     private readonly IGenericRepository<Payment> _paymentRepository;
     private readonly PaymentService _paymentService;
     private readonly IValidator<AppointmentDto> _validator;
+    private readonly IGoogleCalendarService _googleCalendarService;
 
     public AppointmentService(
         IGenericRepository<Appointment> appointmentRepository,
@@ -36,7 +38,8 @@ public class AppointmentService
         IGenericRepository<TimeSlot> timeSlotRepository,
         IGenericRepository<Payment> paymentRepository,
         PaymentService paymentService,
-        IValidator<AppointmentDto> validator)
+        IValidator<AppointmentDto> validator,
+        IGoogleCalendarService googleCalendarService)
     {
         _appointmentRepository = appointmentRepository;
         _scheduledSessionRepository = scheduledSessionRepository;
@@ -48,6 +51,7 @@ public class AppointmentService
         _paymentRepository = paymentRepository;
         _paymentService = paymentService;
         _validator = validator;
+        _googleCalendarService = googleCalendarService;
     }
 
     public async Task<Result> CreateAppointmentAsync(AppointmentDto dto)
@@ -111,6 +115,19 @@ public class AppointmentService
             appointment.PaymentId = payment.Id;
 
             await _appointmentRepository.AddAsync(appointment);
+
+            try
+            {
+                var calendarResult = await _googleCalendarService.CreateAppointmentEventAsync(appointment);
+                if (!calendarResult)
+                {
+                    Console.WriteLine("Advertencia: No se pudo crear el evento en Google Calendar, pero la cita fue guardada.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al crear evento en Google Calendar: {ex.Message}");
+            }
 
             return Result.Success();
         }

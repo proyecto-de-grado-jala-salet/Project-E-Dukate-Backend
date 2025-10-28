@@ -39,23 +39,33 @@ public class GoogleCalendarService : IGoogleCalendarService
     {
         try
         {
+            var firstSession = appointment.ScheduledSessions?.FirstOrDefault();
+            if (firstSession == null)
+            {
+                Console.WriteLine("No hay sesiones programadas para esta cita.");
+                return false;
+            }
+
+            int eventColor = GetColorByPatientId(appointment.PatientId);
+
             var newEvent = new Event
             {
                 Summary = $"Cita: {appointment.Specialty.TypeOfSpecialty} {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal}",
                 Description = $@"Cita médica con el especialista {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal} para el paciente {appointment.Patient.Names} {appointment.Patient.LastNamePaternal}.
                 Cédula: {appointment.Patient.IdentityCard}
                 Género: {appointment.Patient.Gender}
-                Dirección: {appointment.Patient.Address}",
+                Edad: {appointment.Patient.Age}",
                 Start = new EventDateTime
                 {
-                    // DateTime = appointment.StartTime,
+                    DateTimeDateTimeOffset = new DateTimeOffset(firstSession.StartSessionDateTime, TimeSpan.FromHours(-4)),
                     TimeZone = "America/La_Paz"
                 },
                 End = new EventDateTime
                 {
-                    // DateTime = appointment.EndTime,
+                    DateTimeDateTimeOffset = new DateTimeOffset(firstSession.EndSessionDateTime, TimeSpan.FromHours(-4)),
                     TimeZone = "America/La_Paz"
-                }
+                },
+                ColorId = eventColor.ToString(),
             };
 
             var request = _calendarService.Events.Insert(newEvent, _calendarId);
@@ -87,5 +97,15 @@ public class GoogleCalendarService : IGoogleCalendarService
             Console.WriteLine($"Error al listar eventos de Google Calendar: {ex}");
             return new List<Event>();
         }
+    }
+
+    private int GetColorByPatientId(Guid patientId)
+    {
+        byte[] patientBytes = patientId.ToByteArray();
+        int seed = BitConverter.ToInt32(patientBytes, 0);
+        var random = new Random(seed);
+
+        int[] availableColors = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+        return availableColors[random.Next(availableColors.Length)];
     }
 }
