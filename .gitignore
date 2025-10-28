@@ -88,4 +88,4 @@ Dockerfile.user
 # Environment files
 .env
 
-credentials.json
+credentials.jsoncredentials.json
