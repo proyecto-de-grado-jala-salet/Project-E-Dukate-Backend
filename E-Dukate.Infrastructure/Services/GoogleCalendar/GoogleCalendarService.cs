@@ -75,21 +75,31 @@ public class GoogleCalendarService : IGoogleCalendarService
 
             int eventColor = GetColorByPatientId(appointment.PatientId);
 
+            var boliviaOffset = TimeSpan.FromHours(-4);
+        
+
+            var startTimeBolivia = firstSession.StartSessionDateTime + boliviaOffset;
+            var endTimeBolivia = firstSession.EndSessionDateTime + boliviaOffset;
+
+            var gender = appointment.Patient.Gender?.ToUpper() == "F" ? "Femenino" : 
+                    appointment.Patient.Gender?.ToUpper() == "M" ? "Masculino" : 
+                    appointment.Patient.Gender ?? "No especificado";
+
             var newEvent = new Event
             {
                 Summary = $"Cita: {appointment.Specialty.TypeOfSpecialty} {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal}",
                 Description = $@"Cita médica con el especialista {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal} para el paciente {appointment.Patient.Names} {appointment.Patient.LastNamePaternal}.
                 Cédula: {appointment.Patient.IdentityCard}
-                Género: {appointment.Patient.Gender}
+                Género: {gender}
                 Edad: {appointment.Patient.Age}",
                 Start = new EventDateTime
                 {
-                    DateTime = firstSession.StartSessionDateTime,
+                    DateTime = startTimeBolivia,
                     TimeZone = "America/La_Paz"
                 },
                 End = new EventDateTime
                 {
-                    DateTime = firstSession.EndSessionDateTime,
+                    DateTime = endTimeBolivia,
                     TimeZone = "America/La_Paz"
                 },
                 ColorId = eventColor.ToString(),
