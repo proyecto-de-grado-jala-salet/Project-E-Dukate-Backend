@@ -76,11 +76,11 @@ public class GoogleCalendarService : IGoogleCalendarService
             
             if (startDateTime.Kind == DateTimeKind.Utc)
             {
-                startDateTime = startDateTime.ToLocalTime();
+                startDateTime = DateTime.SpecifyKind(startDateTime, DateTimeKind.Local);
             }
             if (endDateTime.Kind == DateTimeKind.Utc)
             {
-                endDateTime = endDateTime.ToLocalTime();
+                endDateTime = DateTime.SpecifyKind(endDateTime, DateTimeKind.Local);
             }
 
             var timeZone = "America/La_Paz";
@@ -98,12 +98,12 @@ public class GoogleCalendarService : IGoogleCalendarService
                 Edad: {appointment.Patient.Age}",
                 Start = new EventDateTime
                 {
-                    DateTimeDateTimeOffset = new DateTimeOffset(startDateTime, TimeZoneInfo.FindSystemTimeZoneById(timeZone).GetUtcOffset(startDateTime)),
+                    DateTime = startDateTime,
                     TimeZone = timeZone
                 },
                 End = new EventDateTime
                 {
-                    DateTimeDateTimeOffset = new DateTimeOffset(endDateTime, TimeZoneInfo.FindSystemTimeZoneById(timeZone).GetUtcOffset(endDateTime)),
+                    DateTime = endDateTime,
                     TimeZone = timeZone
                 },
                 ColorId = eventColor.ToString(),
