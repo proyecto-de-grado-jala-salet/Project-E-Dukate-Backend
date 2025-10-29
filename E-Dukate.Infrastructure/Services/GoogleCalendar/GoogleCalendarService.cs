@@ -71,8 +71,8 @@ public class GoogleCalendarService : IGoogleCalendarService
 
             int eventColor = GetColorByPatientId(appointment.PatientId);
 
-            DateTime startDateTime = firstSession.StartSessionDateTime.AddHours(-4);
-            DateTime endDateTime = firstSession.EndSessionDateTime.AddHours(-4);
+            DateTime startDateTime = firstSession.StartSessionDateTime.AddHours(+4);
+            DateTime endDateTime = firstSession.EndSessionDateTime.AddHours(+4);
 
             var gender = appointment.Patient.Gender?.ToUpper() == "F" ? "Femenino" : 
                     appointment.Patient.Gender?.ToUpper() == "M" ? "Masculino" : 
