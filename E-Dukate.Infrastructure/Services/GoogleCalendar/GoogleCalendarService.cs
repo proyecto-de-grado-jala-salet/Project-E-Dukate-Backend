@@ -62,47 +62,61 @@ public class GoogleCalendarService : IGoogleCalendarService
     {
         try
         {
-            var firstSession = appointment.ScheduledSessions?.FirstOrDefault();
-            if (firstSession == null)
+            if (appointment.ScheduledSessions == null || !appointment.ScheduledSessions.Any())
             {
                 Console.WriteLine("No hay sesiones programadas para esta cita.");
                 return false;
             }
 
             int eventColor = GetColorByPatientId(appointment.PatientId);
+            var gender = appointment.Patient.Gender?.ToUpper() == "F" ? "Femenino" :
+                        appointment.Patient.Gender?.ToUpper() == "M" ? "Masculino" :
+                        appointment.Patient.Gender ?? "No especificado";
 
-            DateTime startDateTime = firstSession.StartSessionDateTime.AddHours(+4);
-            DateTime endDateTime = firstSession.EndSessionDateTime.AddHours(+4);
+            bool allEventsCreated = true;
 
-            var gender = appointment.Patient.Gender?.ToUpper() == "F" ? "Femenino" : 
-                    appointment.Patient.Gender?.ToUpper() == "M" ? "Masculino" : 
-                    appointment.Patient.Gender ?? "No especificado";
-
-            var newEvent = new Event
+            foreach (var session in appointment.ScheduledSessions)
             {
-                Summary = $"Cita: {appointment.Specialty.TypeOfSpecialty} {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal}",
-                Description = $@"Cita médica con el especialista {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal} para el paciente {appointment.Patient.Names} {appointment.Patient.LastNamePaternal}.
-                Cédula: {appointment.Patient.IdentityCard}
-                Género: {gender}
-                Edad: {appointment.Patient.Age}",
-                Start = new EventDateTime
+                try
                 {
-                    DateTime = startDateTime
-                },
-                End = new EventDateTime
-                {
-                    DateTime = endDateTime
-                },
-                ColorId = eventColor.ToString(),
-            };
+                    DateTime startDateTime = session.StartSessionDateTime.AddHours(+4);
+                    DateTime endDateTime = session.EndSessionDateTime.AddHours(+4);
 
-            var request = _calendarService.Events.Insert(newEvent, _calendarId);
-            await request.ExecuteAsync();
-            return true;
+                    var newEvent = new Event
+                    {
+                        Summary = $"Cita: {appointment.Specialty.TypeOfSpecialty} {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal}",
+                        Description = $@"Cita médica con el especialista {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal} para el paciente {appointment.Patient.Names} {appointment.Patient.LastNamePaternal}.
+                        Cédula: {appointment.Patient.IdentityCard}
+                        Género: {gender}
+                        Edad: {appointment.Patient.Age}",
+                        Start = new EventDateTime
+                        {
+                            DateTime = startDateTime
+                        },
+                        End = new EventDateTime
+                        {
+                            DateTime = endDateTime
+                        },
+                        ColorId = eventColor.ToString(),
+                    };
+
+                    var request = _calendarService.Events.Insert(newEvent, _calendarId);
+                    await request.ExecuteAsync();
+
+                    Console.WriteLine($"✅ Evento creado en Google Calendar para sesión: {session.StartSessionDateTime}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Error al crear evento para sesión {session.StartSessionDateTime}: {ex.Message}");
+                    allEventsCreated = false;
+                }
+            }
+
+            return allEventsCreated;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error al crear evento en Google Calendar: {ex}");
+            Console.WriteLine($"❌ Error general al crear eventos en Google Calendar: {ex}");
             return false;
         }
     }
@@ -112,8 +126,8 @@ public class GoogleCalendarService : IGoogleCalendarService
         try
         {
             var request = _calendarService.Events.List(_calendarId);
-            request.TimeMinDateTimeOffset = new DateTimeOffset(startDate, TimeSpan.FromHours(-4));
-            request.TimeMaxDateTimeOffset = new DateTimeOffset(endDate, TimeSpan.FromHours(-4));
+            request.TimeMinDateTimeOffset = new DateTimeOffset(startDate, TimeSpan.FromHours(+4));
+            request.TimeMaxDateTimeOffset = new DateTimeOffset(endDate, TimeSpan.FromHours(+4));
             request.ShowDeleted = false;
             request.SingleEvents = true;
 
@@ -124,6 +138,57 @@ public class GoogleCalendarService : IGoogleCalendarService
         {
             Console.WriteLine($"Error al listar eventos de Google Calendar: {ex}");
             return new List<Event>();
+        }
+    }
+
+    [Obsolete]
+    public async Task<bool> UpdateAppointmentEventsAsync(Appointment appointment)
+    {
+        try
+        {
+            // Primero, eliminar eventos existentes de esta cita
+            await DeleteAppointmentEventsAsync(appointment);
+
+            // Luego crear nuevos eventos para todas las sesiones
+            return await CreateAppointmentEventAsync(appointment);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al actualizar eventos en Google Calendar: {ex}");
+            return false;
+        }
+    }
+
+    private async Task DeleteAppointmentEventsAsync(Appointment appointment)
+    {
+        try
+        {
+            // Buscar eventos existentes por el título/descripción
+            var startDate = appointment.ScheduledSessions.Min(s => s.StartSessionDateTime).AddMonths(-1);
+            var endDate = appointment.ScheduledSessions.Max(s => s.StartSessionDateTime).AddMonths(1);
+
+            var events = await ListEventsAsync(appointment.SpecialistId, startDate, endDate);
+
+            var appointmentEvents = events.Where(e =>
+                e.Description?.Contains((char)appointment.Patient.IdentityCard) == true ||
+                e.Summary?.Contains(appointment.Specialty.TypeOfSpecialty) == true).ToList();
+
+            foreach (var eventItem in appointmentEvents)
+            {
+                try
+                {
+                    var deleteRequest = _calendarService.Events.Delete(_calendarId, eventItem.Id);
+                    await deleteRequest.ExecuteAsync();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error al eliminar evento {eventItem.Id}: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al buscar eventos para eliminar: {ex.Message}");
         }
     }
 
