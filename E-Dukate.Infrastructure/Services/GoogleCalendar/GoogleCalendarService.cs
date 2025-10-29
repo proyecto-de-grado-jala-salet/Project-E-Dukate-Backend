@@ -110,12 +110,12 @@ public class GoogleCalendarService : IGoogleCalendarService
                 Start = new EventDateTime
                 {
                     DateTime = startDateTime,
-                    TimeZone = timeZone
+                    TimeZone = "America/La_Paz"
                 },
                 End = new EventDateTime
                 {
                     DateTime = endDateTime,
-                    TimeZone = timeZone
+                    TimeZone = "America/La_Paz"
                 },
                 ColorId = eventColor.ToString(),
             };
