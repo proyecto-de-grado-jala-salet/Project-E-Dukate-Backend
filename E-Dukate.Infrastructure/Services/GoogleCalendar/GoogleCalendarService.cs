@@ -61,6 +61,7 @@ public class GoogleCalendarService : IGoogleCalendarService
         });
     }
 
+    [Obsolete]
     public async Task<bool> CreateAppointmentEventAsync(Appointment appointment)
     {
         try
@@ -83,12 +84,12 @@ public class GoogleCalendarService : IGoogleCalendarService
                 Edad: {appointment.Patient.Age}",
                 Start = new EventDateTime
                 {
-                    DateTimeDateTimeOffset = new DateTimeOffset(firstSession.StartSessionDateTime, TimeSpan.FromHours(-4)),
+                    DateTime = firstSession.StartSessionDateTime,
                     TimeZone = "America/La_Paz"
                 },
                 End = new EventDateTime
                 {
-                    DateTimeDateTimeOffset = new DateTimeOffset(firstSession.EndSessionDateTime, TimeSpan.FromHours(-4)),
+                    DateTime = firstSession.EndSessionDateTime,
                     TimeZone = "America/La_Paz"
                 },
                 ColorId = eventColor.ToString(),
