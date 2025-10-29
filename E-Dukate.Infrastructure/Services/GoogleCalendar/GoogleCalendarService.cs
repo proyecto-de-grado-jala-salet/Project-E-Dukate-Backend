@@ -21,9 +21,6 @@ public class GoogleCalendarService : IGoogleCalendarService
         GoogleCredential credential;
         
         string? credentialsJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON");
-        Console.WriteLine("🔧 Inicializando GoogleCalendarService...");
-        Console.WriteLine($"📅 CalendarId configurado: {_calendarId}");
-        Console.WriteLine($"AAAAAAAAAa credentialsJson: {credentialsJson}");
         if (!string.IsNullOrEmpty(credentialsJson))
         {
             credential = GoogleCredential.FromJson(credentialsJson)
@@ -40,7 +37,6 @@ public class GoogleCalendarService : IGoogleCalendarService
                     "o la configuración GoogleCalendar:CredentialsPath.");
             }
             
-            // Verificar que el archivo existe
             if (!File.Exists(credentialsPath))
             {
                 throw new FileNotFoundException(
@@ -75,11 +71,19 @@ public class GoogleCalendarService : IGoogleCalendarService
 
             int eventColor = GetColorByPatientId(appointment.PatientId);
 
-            var boliviaOffset = TimeSpan.FromHours(-4);
-        
+            DateTime startDateTime = firstSession.StartSessionDateTime;
+            DateTime endDateTime = firstSession.EndSessionDateTime;
+            
+            if (startDateTime.Kind == DateTimeKind.Utc)
+            {
+                startDateTime = startDateTime.ToLocalTime();
+            }
+            if (endDateTime.Kind == DateTimeKind.Utc)
+            {
+                endDateTime = endDateTime.ToLocalTime();
+            }
 
-            var startTimeBolivia = firstSession.StartSessionDateTime + boliviaOffset;
-            var endTimeBolivia = firstSession.EndSessionDateTime + boliviaOffset;
+            var timeZone = "America/La_Paz";
 
             var gender = appointment.Patient.Gender?.ToUpper() == "F" ? "Femenino" : 
                     appointment.Patient.Gender?.ToUpper() == "M" ? "Masculino" : 
@@ -94,13 +98,13 @@ public class GoogleCalendarService : IGoogleCalendarService
                 Edad: {appointment.Patient.Age}",
                 Start = new EventDateTime
                 {
-                    DateTime = startTimeBolivia,
-                    TimeZone = "America/La_Paz"
+                    DateTimeDateTimeOffset = new DateTimeOffset(startDateTime, TimeZoneInfo.FindSystemTimeZoneById(timeZone).GetUtcOffset(startDateTime)),
+                    TimeZone = timeZone
                 },
                 End = new EventDateTime
                 {
-                    DateTime = endTimeBolivia,
-                    TimeZone = "America/La_Paz"
+                    DateTimeDateTimeOffset = new DateTimeOffset(endDateTime, TimeZoneInfo.FindSystemTimeZoneById(timeZone).GetUtcOffset(endDateTime)),
+                    TimeZone = timeZone
                 },
                 ColorId = eventColor.ToString(),
             };
