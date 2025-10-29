@@ -71,19 +71,30 @@ public class GoogleCalendarService : IGoogleCalendarService
 
             int eventColor = GetColorByPatientId(appointment.PatientId);
 
+            var timeZone = TimeZoneInfo.FindSystemTimeZoneById("America/La_Paz");
+
             DateTime startDateTime = firstSession.StartSessionDateTime;
             DateTime endDateTime = firstSession.EndSessionDateTime;
-            
+
             if (startDateTime.Kind == DateTimeKind.Utc)
             {
-                startDateTime = DateTime.SpecifyKind(startDateTime, DateTimeKind.Local);
+                startDateTime = TimeZoneInfo.ConvertTimeFromUtc(startDateTime, timeZone);
             }
-            if (endDateTime.Kind == DateTimeKind.Utc)
+            else
             {
-                endDateTime = DateTime.SpecifyKind(endDateTime, DateTimeKind.Local);
+                startDateTime = DateTime.SpecifyKind(startDateTime, DateTimeKind.Unspecified);
+                startDateTime = TimeZoneInfo.ConvertTime(startDateTime, timeZone);
             }
 
-            var timeZone = "America/La_Paz";
+            if (endDateTime.Kind == DateTimeKind.Utc)
+            {
+                endDateTime = TimeZoneInfo.ConvertTimeFromUtc(endDateTime, timeZone);
+            }
+            else
+            {
+                endDateTime = DateTime.SpecifyKind(endDateTime, DateTimeKind.Unspecified);
+                endDateTime = TimeZoneInfo.ConvertTime(endDateTime, timeZone);
+            }
 
             var gender = appointment.Patient.Gender?.ToUpper() == "F" ? "Femenino" : 
                     appointment.Patient.Gender?.ToUpper() == "M" ? "Masculino" : 
