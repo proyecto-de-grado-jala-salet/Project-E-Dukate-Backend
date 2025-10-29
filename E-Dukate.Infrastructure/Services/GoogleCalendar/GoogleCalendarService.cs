@@ -23,6 +23,7 @@ public class GoogleCalendarService : IGoogleCalendarService
         string? credentialsJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON");
         Console.WriteLine("🔧 Inicializando GoogleCalendarService...");
         Console.WriteLine($"📅 CalendarId configurado: {_calendarId}");
+        Console.WriteLine($"AAAAAAAAAa credentialsJson: {credentialsJson}");
         if (!string.IsNullOrEmpty(credentialsJson))
         {
             credential = GoogleCredential.FromJson(credentialsJson)
