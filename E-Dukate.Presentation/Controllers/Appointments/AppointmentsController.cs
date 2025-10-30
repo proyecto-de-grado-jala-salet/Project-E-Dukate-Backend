@@ -123,7 +123,7 @@ public class AppointmentsController : ControllerBase
             TotalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize)
         });
     }
-    
+
     [HttpGet("patient/{patientId}")]
     [AllowAnonymous]
     public async Task<IActionResult> GetAppointmentsByPatient(Guid patientId)
@@ -246,22 +246,6 @@ public class AppointmentsController : ControllerBase
         Guid appointmentId,
         Guid sessionId)
     {
-        if (!IsAdministrator())
-        {
-            var currentUserId = GetCurrentUserId();
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId);
-            
-            if (appointment != null)
-            {
-                var dynamicAppointment = appointment as dynamic;
-                Guid appointmentSpecialistId = dynamicAppointment.SpecialistId;
-                
-                if (!currentUserId.HasValue || appointmentSpecialistId != currentUserId.Value)
-                {
-                    return Forbid("No tienes permisos para cancelar sesiones de esta cita.");
-                }
-            }
-        }
 
         var result = await _appointmentService.CancelSessionAsync(appointmentId, sessionId);
         if (!result.IsSuccess)
