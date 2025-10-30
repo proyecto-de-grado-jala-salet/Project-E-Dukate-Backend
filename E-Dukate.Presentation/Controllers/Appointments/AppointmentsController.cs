@@ -146,7 +146,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("appointment/{appointmentId}/cancel-session/{sessionId}")]
-    [Authorize(Roles = "Administrator,Specialist")]
+    [AllowAnonymous]
     public async Task<IActionResult> CancelSession(
         Guid appointmentId,
         Guid sessionId)
@@ -176,7 +176,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("reschedule-session/{appointmentId}")]
-    [Authorize(Roles = "Administrator,Specialist")]
+    [AllowAnonymous]
     public async Task<IActionResult> RescheduleSession(
         Guid appointmentId,
         [FromBody] RescheduleSessionDto dto)
