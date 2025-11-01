@@ -423,32 +423,45 @@ public class AppointmentService
                 .Where(a => a.SpecialistId == specialist.Id && a.Id != appointmentId)
                 .ToListAsync();
 
-            // Buscar horarios disponibles para el mismo día y la siguiente semana
-            var startDate = request.SpecificDate?.Date ?? sessionToReschedule.StartSessionDateTime.Date;
-
-            for (int weekOffset = 0; weekOffset < request.LookAheadWeeks; weekOffset++)
+            // Buscar horarios disponibles basado en el día seleccionado
+            if (!string.IsNullOrEmpty(request.TargetDayOfWeek))
             {
-                var targetDate = startDate.AddDays(7 * weekOffset);
+                // Buscar para esta semana y la siguiente
+                var startDate = DateTime.UtcNow.Date;
 
-                // Si se especificó un día de la semana, ajustar la fecha a ese día
-                if (!string.IsNullOrEmpty(request.TargetDayOfWeek))
+                for (int weekOffset = 0; weekOffset < request.LookAheadWeeks; weekOffset++)
                 {
-                    var targetDay = Enum.Parse<DayOfWeek>(request.TargetDayOfWeek);
-                    targetDate = GetNextWeekday(targetDate, targetDay);
-                }
+                    var targetDate = GetNextWeekday(startDate, Enum.Parse<DayOfWeek>(request.TargetDayOfWeek));
+                    targetDate = targetDate.AddDays(7 * weekOffset);
 
-                var slotsForWeek = await GetAvailableSlotsForDate(
+                    var slotsForDate = await GetAvailableSlotsForDate(
+                        specialist,
+                        targetDate,
+                        existingAppointments,
+                        sessionToReschedule.StartSessionDateTime,
+                        appointmentId);
+
+                    availableSlots.AddRange(slotsForDate);
+                }
+            }
+
+            // Si se especificó una fecha específica, buscar también para esa fecha
+            if (request.SpecificDate.HasValue)
+            {
+                var specificDateSlots = await GetAvailableSlotsForDate(
                     specialist,
-                    targetDate,
+                    request.SpecificDate.Value.Date,
                     existingAppointments,
                     sessionToReschedule.StartSessionDateTime,
                     appointmentId);
 
-                availableSlots.AddRange(slotsForWeek);
+                availableSlots.AddRange(specificDateSlots);
             }
 
-            // Ordenar los resultados
+            // Eliminar duplicados y ordenar
             availableSlots = availableSlots
+                .GroupBy(slot => new { slot.StartDateTime, slot.EndDateTime })
+                .Select(group => group.First())
                 .OrderBy(slot => slot.StartDateTime)
                 .ToList();
 
