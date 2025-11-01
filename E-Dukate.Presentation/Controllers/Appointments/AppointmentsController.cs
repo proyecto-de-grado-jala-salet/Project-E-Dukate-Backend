@@ -254,11 +254,11 @@ public class AppointmentsController : ControllerBase
         return NoContent();
     }
 
-    [HttpPut("reschedule-session/{appointmentId}")]
+    [HttpPut("{appointmentId}/reschedule-session")]
     [AllowAnonymous]
     public async Task<IActionResult> RescheduleSession(
-        Guid appointmentId,
-        [FromBody] RescheduleSessionDto dto)
+    Guid appointmentId,
+    [FromBody] RescheduleSessionDto dto)
     {
         if (!IsAdministrator())
         {
@@ -284,7 +284,7 @@ public class AppointmentsController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("reschedule-preview/{appointmentId}")]
+    [HttpPost("{appointmentId}/reschedule-preview")]
     [AllowAnonymous]
     public async Task<IActionResult> GetReschedulePreview(
     Guid appointmentId,
