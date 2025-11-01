@@ -423,39 +423,41 @@ public class AppointmentService
                 .Where(a => a.SpecialistId == specialist.Id && a.Id != appointmentId)
                 .ToListAsync();
 
-            // Buscar horarios disponibles basado en el día seleccionado
+            // Buscar horarios disponibles para el día seleccionado (esta semana y siguiente)
             if (!string.IsNullOrEmpty(request.TargetDayOfWeek))
             {
-                // Buscar para esta semana y la siguiente
                 var startDate = DateTime.UtcNow.Date;
+                var targetDay = Enum.Parse<DayOfWeek>(request.TargetDayOfWeek);
 
                 for (int weekOffset = 0; weekOffset < request.LookAheadWeeks; weekOffset++)
                 {
-                    var targetDate = GetNextWeekday(startDate, Enum.Parse<DayOfWeek>(request.TargetDayOfWeek));
+                    var targetDate = GetNextWeekday(startDate, targetDay);
                     targetDate = targetDate.AddDays(7 * weekOffset);
 
-                    var slotsForDate = await GetAvailableSlotsForDate(
-                        specialist,
-                        targetDate,
-                        existingAppointments,
-                        sessionToReschedule.StartSessionDateTime,
-                        appointmentId);
-
-                    availableSlots.AddRange(slotsForDate);
+                    // Excluir la fecha y hora actual de la sesión
+                    if (targetDate.Date == sessionToReschedule.StartSessionDateTime.Date)
+                    {
+                        // Si es el mismo día, excluir el horario actual
+                        var slotsForDate = await GetAvailableSlotsForDateExcludingCurrent(
+                            specialist,
+                            targetDate,
+                            existingAppointments,
+                            sessionToReschedule,
+                            appointmentId);
+                        availableSlots.AddRange(slotsForDate);
+                    }
+                    else
+                    {
+                        // Para otros días, buscar todos los horarios disponibles
+                        var slotsForDate = await GetAvailableSlotsForDate(
+                            specialist,
+                            targetDate,
+                            existingAppointments,
+                            sessionToReschedule.StartSessionDateTime,
+                            appointmentId);
+                        availableSlots.AddRange(slotsForDate);
+                    }
                 }
-            }
-
-            // Si se especificó una fecha específica, buscar también para esa fecha
-            if (request.SpecificDate.HasValue)
-            {
-                var specificDateSlots = await GetAvailableSlotsForDate(
-                    specialist,
-                    request.SpecificDate.Value.Date,
-                    existingAppointments,
-                    sessionToReschedule.StartSessionDateTime,
-                    appointmentId);
-
-                availableSlots.AddRange(specificDateSlots);
             }
 
             // Eliminar duplicados y ordenar
@@ -471,6 +473,64 @@ public class AppointmentService
         {
             return ValueResult<List<AvailableTimeSlotDto>>.Failure($"Error al obtener horarios disponibles: {ex.Message}");
         }
+    }
+
+    private async Task<List<AvailableTimeSlotDto>> GetAvailableSlotsForDateExcludingCurrent(
+    Specialist specialist,
+    DateTime date,
+    List<Appointment> existingAppointments,
+    ScheduledSession currentSession,
+    Guid currentAppointmentId)
+    {
+        var availableSlots = new List<AvailableTimeSlotDto>();
+
+        // Obtener el horario del especialista para este día de la semana
+        var daySchedule = specialist.Schedules
+            .FirstOrDefault(s => s.DayOfWeek == date.DayOfWeek && s.Attends);
+
+        if (daySchedule == null)
+            return availableSlots;
+
+        foreach (var timeSlot in daySchedule.TimeSlots.OrderBy(ts => ts.StartTime))
+        {
+            var slotStartDateTime = date.Add(timeSlot.StartTime.ToTimeSpan());
+            var slotEndDateTime = date.Add(timeSlot.EndTime.ToTimeSpan());
+
+            // Verificar si el slot está en el pasado
+            if (slotStartDateTime <= DateTime.UtcNow)
+                continue;
+
+            // Excluir el horario actual de la sesión
+            if (slotStartDateTime.TimeOfDay == currentSession.StartSessionDateTime.TimeOfDay &&
+                slotEndDateTime.TimeOfDay == currentSession.EndSessionDateTime.TimeOfDay)
+            {
+                continue; // Saltar el horario actual
+            }
+
+            // Verificar si el horario está ocupado
+            var isOccupied = existingAppointments
+                .SelectMany(a => a.ScheduledSessions)
+                .Any(session => session.StartSessionDateTime < slotEndDateTime &&
+                               session.EndSessionDateTime > slotStartDateTime &&
+                               session.Status != ScheduledSessionStatus.Cancelled);
+
+            if (!isOccupied)
+            {
+                availableSlots.Add(new AvailableTimeSlotDto
+                {
+                    TimeSlotId = timeSlot.Id,
+                    StartDateTime = slotStartDateTime,
+                    EndDateTime = slotEndDateTime,
+                    DayOfWeek = date.DayOfWeek.ToString(),
+                    FormattedDate = date.ToString("dd/MM/yyyy"),
+                    FormattedTime = $"{timeSlot.StartTime:hh\\:mm} - {timeSlot.EndTime:hh\\:mm}",
+                    IsSameDay = date.Date == currentSession.StartSessionDateTime.Date,
+                    IsNextWeek = date.Date > currentSession.StartSessionDateTime.Date.AddDays(7)
+                });
+            }
+        }
+
+        return availableSlots;
     }
 
     private DateTime GetNextWeekday(DateTime start, DayOfWeek day)
