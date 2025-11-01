@@ -254,7 +254,7 @@ public class AppointmentsController : ControllerBase
         return NoContent();
     }
 
-    [HttpPut("{appointmentId}/reschedule-session")]
+    [HttpPut("reschedule-session/{appointmentId}")]
     [AllowAnonymous]
     public async Task<IActionResult> RescheduleSession(
     Guid appointmentId,
