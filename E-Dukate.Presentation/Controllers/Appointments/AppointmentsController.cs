@@ -264,12 +264,12 @@ public class AppointmentsController : ControllerBase
         {
             var currentUserId = GetCurrentUserId();
             var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId);
-            
+
             if (appointment != null)
             {
                 var dynamicAppointment = appointment as dynamic;
                 Guid appointmentSpecialistId = dynamicAppointment.SpecialistId;
-                
+
                 if (!currentUserId.HasValue || appointmentSpecialistId != currentUserId.Value)
                 {
                     return Forbid("No tienes permisos para reprogramar sesiones de esta cita.");
@@ -282,6 +282,44 @@ public class AppointmentsController : ControllerBase
             return BadRequest(new { Error = result.ErrorMessage });
 
         return NoContent();
+    }
+
+    [HttpPost("reschedule-preview/{appointmentId}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetReschedulePreview(
+    Guid appointmentId,
+    [FromBody] ReschedulePreviewRequestDto request)
+    {
+        try
+        {
+            // Obtener la cita actual para validar permisos y datos
+            var currentAppointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId);
+            if (currentAppointment == null)
+                return NotFound(new { Error = "Cita no encontrada" });
+
+            // Validar que el usuario tenga permisos (si no es administrador)
+            if (!IsAdministrator())
+            {
+                var currentUserId = GetCurrentUserId();
+                var dynamicAppointment = currentAppointment as dynamic;
+                Guid appointmentSpecialistId = dynamicAppointment.SpecialistId;
+
+                if (!currentUserId.HasValue || appointmentSpecialistId != currentUserId.Value)
+                {
+                    return Forbid("No tienes permisos para reprogramar esta cita.");
+                }
+            }
+
+            var result = await _appointmentService.GetReschedulePreviewAsync(appointmentId, request);
+            if (!result.IsSuccess)
+                return BadRequest(new { Error = result.ErrorMessage });
+
+            return Ok(new { AvailableSlots = result.Value });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Error = "Error interno del servidor", Details = ex.Message });
+        }
     }
 
     [HttpPost("preview")]

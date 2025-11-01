@@ -325,68 +325,210 @@ public class AppointmentService
 
     public async Task<Result> RescheduleSessionAsync(Guid appointmentId, RescheduleSessionDto dto)
     {
-        if (!Enum.TryParse<DayOfWeek>(dto.DayOfWeek, true, out var dayOfWeek))
-            return Result.Failure($"Día de la semana inválido: {dto.DayOfWeek}.");
+        try
+        {
+            // Obtener la cita
+            var appointment = await _appointmentRepository.GetAll()
+                .Include(a => a.ScheduledSessions)
+                .Include(a => a.Specialist)
+                .ThenInclude(s => s.Schedules)
+                .ThenInclude(sch => sch.TimeSlots)
+                .FirstOrDefaultAsync(a => a.Id == appointmentId);
 
-        if (!TimeOnly.TryParse(dto.StartTime, out var startTime) ||
-            !TimeOnly.TryParse(dto.EndTime, out var endTime))
-            return Result.Failure($"Formato de hora inválido: {dto.StartTime} - {dto.EndTime}.");
-        
-        var appointment = await _appointmentRepository.GetAll()
-            .Include(a => a.ScheduledSessions)
-            .FirstOrDefaultAsync(a => a.Id == appointmentId);
+            if (appointment == null)
+                return Result.Failure("Cita no encontrada");
 
-        if (appointment == null)
-            return Result.Failure("Cita no encontrada.");
+            // Encontrar la sesión a reprogramar
+            var sessionToUpdate = appointment.ScheduledSessions
+                .FirstOrDefault(s => s.Id == dto.SessionId);
 
-        var session = appointment.ScheduledSessions.FirstOrDefault(s => s.Id == dto.SessionId);
-        if (session == null)
-            return Result.Failure("Sesión no encontrada.");
-        
-        var schedules = await _scheduleRepository.GetAll()
-            .Include(s => s.TimeSlots)
-            .Where(s => s.SpecialistId == appointment.SpecialistId && s.Attends)
+            if (sessionToUpdate == null)
+                return Result.Failure("Sesión no encontrada");
+
+            // Validar que el nuevo horario esté disponible
+            var isAvailable = await IsTimeSlotAvailable(
+                appointment.SpecialistId,
+                dto.NewStartDateTime,
+                dto.NewEndDateTime,
+                appointmentId);
+
+            if (!isAvailable)
+                return Result.Failure("El horario seleccionado ya no está disponible");
+
+            // Validar que el time slot pertenezca al especialista
+            var isValidTimeSlot = await _timeSlotRepository.GetAll()
+                .AnyAsync(ts => ts.Id == dto.NewTimeSlotId &&
+                               ts.Schedule!.SpecialistId == appointment.SpecialistId);
+
+            if (!isValidTimeSlot)
+                return Result.Failure("El horario seleccionado no es válido para este especialista");
+
+            // Actualizar la sesión
+            sessionToUpdate.TimeSlotId = dto.NewTimeSlotId;
+            sessionToUpdate.StartSessionDateTime = dto.NewStartDateTime;
+            sessionToUpdate.EndSessionDateTime = dto.NewEndDateTime;
+            sessionToUpdate.Status = ScheduledSessionStatus.Rescheduled;
+
+            await _scheduledSessionRepository.UpdateAsync(sessionToUpdate);
+
+            // Actualizar en Google Calendar si es necesario
+            try
+            {
+                await _googleCalendarService.UpdateAppointmentEventsAsync(appointment);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al actualizar evento en Google Calendar: {ex.Message}");
+            }
+
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure($"Error al reprogramar la sesión: {ex.Message}");
+        }
+    }
+
+    public async Task<ValueResult<List<AvailableTimeSlotDto>>> GetReschedulePreviewAsync(
+    Guid appointmentId,
+    ReschedulePreviewRequestDto request)
+    {
+        try
+        {
+            // Obtener la cita actual con todas las relaciones necesarias
+            var appointment = await _appointmentRepository.GetAll()
+                .Include(a => a.Specialist)
+                .Include(a => a.ScheduledSessions)
+                .Include(a => a.Specialist.Schedules)
+                    .ThenInclude(s => s.TimeSlots)
+                .FirstOrDefaultAsync(a => a.Id == appointmentId);
+
+            if (appointment == null)
+                return ValueResult<List<AvailableTimeSlotDto>>.Failure("Cita no encontrada");
+
+            // Obtener la sesión que se quiere reprogramar
+            var sessionToReschedule = appointment.ScheduledSessions
+                .FirstOrDefault(s => s.Id == request.SessionId);
+
+            if (sessionToReschedule == null)
+                return ValueResult<List<AvailableTimeSlotDto>>.Failure("Sesión no encontrada");
+
+            // Obtener el especialista y sus horarios
+            var specialist = appointment.Specialist;
+            var availableSlots = new List<AvailableTimeSlotDto>();
+
+            // Obtener todas las citas existentes del especialista para verificar disponibilidad
+            var existingAppointments = await _appointmentRepository.GetAll()
+                .Include(a => a.ScheduledSessions)
+                .Where(a => a.SpecialistId == specialist.Id && a.Id != appointmentId)
+                .ToListAsync();
+
+            // Buscar horarios disponibles para el mismo día y la siguiente semana
+            var startDate = request.SpecificDate?.Date ?? sessionToReschedule.StartSessionDateTime.Date;
+
+            for (int weekOffset = 0; weekOffset < request.LookAheadWeeks; weekOffset++)
+            {
+                var targetDate = startDate.AddDays(7 * weekOffset);
+
+                // Si se especificó un día de la semana, ajustar la fecha a ese día
+                if (!string.IsNullOrEmpty(request.TargetDayOfWeek))
+                {
+                    var targetDay = Enum.Parse<DayOfWeek>(request.TargetDayOfWeek);
+                    targetDate = GetNextWeekday(targetDate, targetDay);
+                }
+
+                var slotsForWeek = await GetAvailableSlotsForDate(
+                    specialist,
+                    targetDate,
+                    existingAppointments,
+                    sessionToReschedule.StartSessionDateTime,
+                    appointmentId);
+
+                availableSlots.AddRange(slotsForWeek);
+            }
+
+            // Ordenar los resultados
+            availableSlots = availableSlots
+                .OrderBy(slot => slot.StartDateTime)
+                .ToList();
+
+            return ValueResult<List<AvailableTimeSlotDto>>.Success(availableSlots);
+        }
+        catch (Exception ex)
+        {
+            return ValueResult<List<AvailableTimeSlotDto>>.Failure($"Error al obtener horarios disponibles: {ex.Message}");
+        }
+    }
+
+    private DateTime GetNextWeekday(DateTime start, DayOfWeek day)
+    {
+        int daysToAdd = ((int)day - (int)start.DayOfWeek + 7) % 7;
+        return start.AddDays(daysToAdd == 0 ? 7 : daysToAdd); // Si es el mismo día, buscar la siguiente semana
+    }
+
+    private async Task<List<AvailableTimeSlotDto>> GetAvailableSlotsForDate(
+    Specialist specialist,
+    DateTime date,
+    List<Appointment> existingAppointments,
+    DateTime originalSessionTime,
+    Guid currentAppointmentId)
+    {
+        var availableSlots = new List<AvailableTimeSlotDto>();
+
+        // Obtener el horario del especialista para este día de la semana
+        var daySchedule = specialist.Schedules
+            .FirstOrDefault(s => s.DayOfWeek == date.DayOfWeek && s.Attends);
+
+        if (daySchedule == null)
+            return availableSlots;
+
+        foreach (var timeSlot in daySchedule.TimeSlots.OrderBy(ts => ts.StartTime))
+        {
+            var slotStartDateTime = date.Add(timeSlot.StartTime.ToTimeSpan());
+            var slotEndDateTime = date.Add(timeSlot.EndTime.ToTimeSpan());
+
+            // Verificar si el slot está en el pasado
+            if (slotStartDateTime <= DateTime.UtcNow)
+                continue;
+
+            // Verificar si el horario está ocupado
+            var isOccupied = existingAppointments
+                .SelectMany(a => a.ScheduledSessions)
+                .Any(session => session.StartSessionDateTime < slotEndDateTime &&
+                               session.EndSessionDateTime > slotStartDateTime &&
+                               session.Status != ScheduledSessionStatus.Cancelled);
+
+            if (!isOccupied)
+            {
+                availableSlots.Add(new AvailableTimeSlotDto
+                {
+                    TimeSlotId = timeSlot.Id,
+                    StartDateTime = slotStartDateTime,
+                    EndDateTime = slotEndDateTime,
+                    DayOfWeek = date.DayOfWeek.ToString(),
+                    FormattedDate = date.ToString("dd/MM/yyyy"),
+                    FormattedTime = $"{timeSlot.StartTime:hh\\:mm} - {timeSlot.EndTime:hh\\:mm}",
+                    IsSameDay = date.Date == originalSessionTime.Date,
+                    IsNextWeek = date.Date > originalSessionTime.Date.AddDays(7)
+                });
+            }
+        }
+
+        return availableSlots;
+    }
+
+    private async Task<bool> IsTimeSlotAvailable(Guid specialistId, DateTime start, DateTime end, Guid excludeAppointmentId)
+    {
+        var conflictingSessions = await _scheduledSessionRepository.GetAll()
+            .Include(ss => ss.Appointment)
+            .Where(ss => ss.Appointment!.SpecialistId == specialistId &&
+                        ss.AppointmentId != excludeAppointmentId &&
+                        ss.Status != ScheduledSessionStatus.Cancelled &&
+                        ss.StartSessionDateTime < end &&
+                        ss.EndSessionDateTime > start)
             .ToListAsync();
 
-        var timeSlot = await _timeSlotRepository.GetByIdAsync(dto.TimeSlotId);
-        if (timeSlot == null || timeSlot.StartTime != startTime || timeSlot.EndTime != endTime)
-            return Result.Failure("Horario no válido.");
-
-        var schedule = schedules.FirstOrDefault(s =>
-            s.Id == timeSlot.ScheduleId && s.DayOfWeek == dayOfWeek);
-
-        if (schedule == null)
-            return Result.Failure($"El horario no está disponible para {dto.DayOfWeek}.");
-        
-        var currentDate = DateTime.UtcNow.Date;
-        var daysUntilNext = ((int)dayOfWeek - (int)currentDate.DayOfWeek + 7) % 7;
-        var todayAtStartTime = currentDate.Add(startTime.ToTimeSpan());
-
-        if (daysUntilNext == 0 && DateTime.UtcNow > todayAtStartTime)
-            daysUntilNext = 7;
-
-        var newDate = currentDate.AddDays(daysUntilNext);
-        var newStartDateTime = newDate.Add(startTime.ToTimeSpan());
-        var newEndDateTime = newDate.Add(endTime.ToTimeSpan());
-
-        var isOccupied = await _scheduledSessionRepository.GetAll()
-            .AnyAsync(ss =>
-                ss.TimeSlotId == dto.TimeSlotId &&
-                ss.StartSessionDateTime.Date == newDate.Date &&
-                ss.StartSessionDateTime.Hour == startTime.Hour &&
-                ss.StartSessionDateTime.Minute == startTime.Minute &&
-                ss.Id != dto.SessionId);
-
-        if (isOccupied)
-            return Result.Failure("El horario seleccionado no está disponible.");
-        
-        session.StartSessionDateTime = newStartDateTime;
-        session.EndSessionDateTime = newEndDateTime;
-        session.Status = ScheduledSessionStatus.Rescheduled;
-
-        await _appointmentRepository.UpdateAsync(appointment);
-
-        return Result.Success();
+        return !conflictingSessions.Any();
     }
 
     private string GetAppointmentStatus(Appointment appointment)
