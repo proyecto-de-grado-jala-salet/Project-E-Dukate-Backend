@@ -260,23 +260,6 @@ public class AppointmentsController : ControllerBase
     Guid appointmentId,
     [FromBody] RescheduleSessionDto dto)
     {
-        if (!IsAdministrator())
-        {
-            var currentUserId = GetCurrentUserId();
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId);
-
-            if (appointment != null)
-            {
-                var dynamicAppointment = appointment as dynamic;
-                Guid appointmentSpecialistId = dynamicAppointment.SpecialistId;
-
-                if (!currentUserId.HasValue || appointmentSpecialistId != currentUserId.Value)
-                {
-                    return Forbid("No tienes permisos para reprogramar sesiones de esta cita.");
-                }
-            }
-        }
-
         var result = await _appointmentService.RescheduleSessionAsync(appointmentId, dto);
         if (!result.IsSuccess)
             return BadRequest(new { Error = result.ErrorMessage });
@@ -292,23 +275,9 @@ public class AppointmentsController : ControllerBase
     {
         try
         {
-            // Obtener la cita actual para validar permisos y datos
             var currentAppointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId);
             if (currentAppointment == null)
                 return NotFound(new { Error = "Cita no encontrada" });
-
-            // Validar que el usuario tenga permisos (si no es administrador)
-            if (!IsAdministrator())
-            {
-                var currentUserId = GetCurrentUserId();
-                var dynamicAppointment = currentAppointment as dynamic;
-                Guid appointmentSpecialistId = dynamicAppointment.SpecialistId;
-
-                if (!currentUserId.HasValue || appointmentSpecialistId != currentUserId.Value)
-                {
-                    return Forbid("No tienes permisos para reprogramar esta cita.");
-                }
-            }
 
             var result = await _appointmentService.GetReschedulePreviewAsync(appointmentId, request);
             if (!result.IsSuccess)
