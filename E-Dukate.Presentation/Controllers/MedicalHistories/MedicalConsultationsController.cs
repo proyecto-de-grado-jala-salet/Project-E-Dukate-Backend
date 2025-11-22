@@ -175,6 +175,11 @@ public class MedicalConsultationsController : ControllerBase
         try
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("Usuario no autenticado.");
+            }
+
             var document = await _context.MedicalDocuments
                 .Include(d => d.Permission)
                 .ThenInclude(p => p!.MedicalHistory)
@@ -192,21 +197,30 @@ public class MedicalConsultationsController : ControllerBase
 
             if (User.IsInRole("Specialist"))
             {
-                var medicalHistoryId = document.Permission!.MedicalHistoryId;
-                var hasPermission = await _context.MedicalHistoryPermissions
-                    .AnyAsync(p => p.MedicalHistoryId == medicalHistoryId && p.SpecialistId == Guid.Parse(userId!));
+                var userIsSpecialist = await _context.Specialists
+                    .AnyAsync(s => s.Id == Guid.Parse(userId));
 
-                if (!hasPermission)
+                if (!userIsSpecialist)
                 {
-                    return Forbid("No tienes permisos para ver este documento.");
+                    return Forbid("No tienes permisos para ver documentos.");
                 }
+            }
+            
+            if (!Uri.IsWellFormedUriString(document.FilePath, UriKind.Absolute))
+            {
+                return StatusCode(500, "La URL del documento no es válida.");
             }
 
             return Redirect(document.FilePath);
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = $"Error al obtener el documento: {ex.Message}" });
+            Console.WriteLine($"Error en GetDocument: {ex.Message}");
+            return StatusCode(500, new
+            {
+                error = "Error interno del servidor al obtener el documento.",
+                details = ex.Message
+            });
         }
     }
 
