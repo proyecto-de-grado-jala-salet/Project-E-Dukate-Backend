@@ -149,7 +149,6 @@ public class GoogleCalendarService : IGoogleCalendarService
     {
         try
         {
-            Console.WriteLine($"🔍 Iniciando actualización de eventos para cita: {appointment?.Id}");
 
             if (appointment == null)
             {
@@ -182,15 +181,9 @@ public class GoogleCalendarService : IGoogleCalendarService
                 return false;
             }
 
-            Console.WriteLine($"📋 Paciente: {appointment.Patient.Names} {appointment.Patient.LastNamePaternal}");
-            Console.WriteLine($"👨‍⚕️ Especialista: {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal}");
-            Console.WriteLine($"🎯 Especialidad: {appointment.Specialty.TypeOfSpecialty}");
-
             // Buscar y actualizar solo las sesiones que cambiaron
             var startDate = appointment.ScheduledSessions.Min(s => s.StartSessionDateTime).AddMonths(-1);
             var endDate = appointment.ScheduledSessions.Max(s => s.StartSessionDateTime).AddMonths(1);
-
-            Console.WriteLine($"🔍 Buscando eventos desde: {startDate} hasta: {endDate}");
 
             var existingEvents = await ListEventsAsync(appointment.SpecialistId, startDate, endDate);
 
@@ -200,8 +193,6 @@ public class GoogleCalendarService : IGoogleCalendarService
                 Console.WriteLine("⚠️ No se pudieron obtener los eventos existentes, creando lista vacía.");
                 existingEvents = new List<Event>();
             }
-
-            Console.WriteLine($"📅 Eventos existentes encontrados: {existingEvents.Count}");
 
             var gender = appointment.Patient.Gender?.ToUpper() == "F" ? "Femenino" :
                         appointment.Patient.Gender?.ToUpper() == "M" ? "Masculino" :
@@ -236,7 +227,6 @@ public class GoogleCalendarService : IGoogleCalendarService
 
                     if (existingEvent != null)
                     {
-                        Console.WriteLine($"✅ Actualizando evento existente: {existingEvent.Id}");
 
                         // Actualizar evento existente
                         existingEvent.Summary = eventSummary;
@@ -276,8 +266,7 @@ public class GoogleCalendarService : IGoogleCalendarService
                     allEventsUpdated = false;
                 }
             }
-
-            Console.WriteLine($"📊 Resultado actualización: {(allEventsUpdated ? "ÉXITO" : "CON ERRORES")}");
+            
             return allEventsUpdated;
         }
         catch (Exception ex)

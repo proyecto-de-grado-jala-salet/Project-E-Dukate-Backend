@@ -263,9 +263,12 @@ public class AppointmentService
     public async Task<Result> CancelSessionAsync(Guid appointmentId, Guid sessionId)
     {
         var appointment = await _appointmentRepository.GetAll()
-            .Include(a => a.ScheduledSessions)
-            .Include(a => a.Payment)
-            .FirstOrDefaultAsync(a => a.Id == appointmentId);
+        .Include(a => a.ScheduledSessions)
+        .Include(a => a.Payment)
+        .Include(a => a.Patient)
+        .Include(a => a.Specialist)
+        .Include(a => a.Specialty)
+        .FirstOrDefaultAsync(a => a.Id == appointmentId);
 
         if (appointment == null)
             return Result.Failure("Cita no encontrada.");
