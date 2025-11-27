@@ -153,6 +153,7 @@ public class PaymentService
 
         var totalCount = await query.CountAsync();
         var items = await query
+            .OrderByDescending(p => p.FirstPaymentDate ?? p.LastPaymentDate ?? DateTime.MaxValue)
             .Skip((pagination.PageNumber - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
             .ToListAsync();
