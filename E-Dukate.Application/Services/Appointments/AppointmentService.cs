@@ -338,11 +338,13 @@ public class AppointmentService
         {
             // Obtener la cita
             var appointment = await _appointmentRepository.GetAll()
-                .Include(a => a.ScheduledSessions)
-                .Include(a => a.Specialist)
+            .Include(a => a.ScheduledSessions)
+            .Include(a => a.Specialist)
                 .ThenInclude(s => s.Schedules)
                 .ThenInclude(sch => sch.TimeSlots)
-                .FirstOrDefaultAsync(a => a.Id == appointmentId);
+            .Include(a => a.Patient)
+            .Include(a => a.Specialty)
+            .FirstOrDefaultAsync(a => a.Id == appointmentId);
 
             if (appointment == null)
                 return Result.Failure("Cita no encontrada");
