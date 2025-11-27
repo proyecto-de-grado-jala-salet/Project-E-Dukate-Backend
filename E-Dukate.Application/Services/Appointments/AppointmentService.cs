@@ -285,6 +285,15 @@ public class AppointmentService
 
         session.Status = ScheduledSessionStatus.Cancelled;
 
+        try
+        {
+            await _googleCalendarService.DeleteAppointmentEventAsync(appointment);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Advertencia: No se pudo eliminar el evento del calendario: {ex.Message}");
+        }
+
         var activeSessions = appointment.ScheduledSessions
             .Count(s => s.Status != ScheduledSessionStatus.Cancelled);
 

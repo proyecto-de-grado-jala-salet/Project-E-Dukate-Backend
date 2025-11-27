@@ -276,6 +276,20 @@ public class GoogleCalendarService : IGoogleCalendarService
             Console.WriteLine($"Error al buscar eventos para eliminar: {ex.Message}");
         }
     }
+    
+    public async Task<bool> DeleteAppointmentEventAsync(Appointment appointment)
+    {
+        try
+        {
+            await DeleteAppointmentEventsAsync(appointment);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error al eliminar evento de Google Calendar: {ex.Message}");
+            return false;
+        }
+    }
 
     private int GetColorByPatientId(Guid patientId)
     {
