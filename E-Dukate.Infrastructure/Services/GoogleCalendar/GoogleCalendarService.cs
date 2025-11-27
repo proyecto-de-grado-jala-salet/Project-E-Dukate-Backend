@@ -121,15 +121,18 @@ public class GoogleCalendarService : IGoogleCalendarService
         }
     }
 
+    [Obsolete]
     public async Task<List<Event>> ListEventsAsync(Guid specialistId, DateTime startDate, DateTime endDate)
     {
         try
         {
             var request = _calendarService.Events.List(_calendarId);
-            request.TimeMinDateTimeOffset = new DateTimeOffset(startDate, TimeSpan.FromHours(+4));
-            request.TimeMaxDateTimeOffset = new DateTimeOffset(endDate, TimeSpan.FromHours(+4));
+
+            request.TimeMin = startDate;
+            request.TimeMax = endDate;
             request.ShowDeleted = false;
             request.SingleEvents = true;
+            request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
 
             var events = await request.ExecuteAsync();
             return events.Items?.ToList() ?? new List<Event>();
@@ -158,6 +161,12 @@ public class GoogleCalendarService : IGoogleCalendarService
 
             var existingEvents = await ListEventsAsync(appointment.SpecialistId, startDate, endDate);
 
+            if (existingEvents == null)
+            {
+                Console.WriteLine("No se pudieron obtener los eventos existentes.");
+                existingEvents = new List<Event>();
+            }
+
             var gender = appointment.Patient.Gender?.ToUpper() == "F" ? "Femenino" :
                         appointment.Patient.Gender?.ToUpper() == "M" ? "Masculino" :
                         appointment.Patient.Gender ?? "No especificado";
@@ -171,21 +180,19 @@ public class GoogleCalendarService : IGoogleCalendarService
                     DateTime startDateTime = session.StartSessionDateTime.AddHours(+4);
                     DateTime endDateTime = session.EndSessionDateTime.AddHours(+4);
 
-                    // Buscar si ya existe un evento para esta sesión
                     var existingEvent = existingEvents.FirstOrDefault(e =>
                         e.Start?.DateTimeDateTimeOffset?.DateTime == startDateTime ||
-                        e.Description?.Contains((char)appointment.Patient.IdentityCard) == true);
+                        e.Description?.Contains(appointment.Patient.IdentityCard.ToString()) == true);
 
                     var eventSummary = $"Cita: {appointment.Specialty.TypeOfSpecialty} - {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal}";
                     var eventDescription = $@"Cita médica con el especialista {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal} para el paciente {appointment.Patient.Names} {appointment.Patient.LastNamePaternal}.
-                    Cédula: {appointment.Patient.IdentityCard}
-                    Género: {gender}
-                    Edad: {appointment.Patient.Age}
-                    Estado: {session.Status}";
+                Cédula: {appointment.Patient.IdentityCard}
+                Género: {gender}
+                Edad: {appointment.Patient.Age}
+                Estado: {session.Status}";
 
                     if (existingEvent != null)
                     {
-                        // Actualizar evento existente
                         existingEvent.Summary = eventSummary;
                         existingEvent.Description = eventDescription;
                         existingEvent.Start = new EventDateTime { DateTime = startDateTime };
@@ -198,7 +205,6 @@ public class GoogleCalendarService : IGoogleCalendarService
                     }
                     else
                     {
-                        // Crear nuevo evento
                         var newEvent = new Event
                         {
                             Summary = eventSummary,
@@ -229,7 +235,8 @@ public class GoogleCalendarService : IGoogleCalendarService
             return false;
         }
     }
-    
+
+    [Obsolete]
     public async Task<List<Event>> GetEventsByPatientIdentityAsync(string identityCard, DateTime startDate, DateTime endDate)
     {
         try
@@ -244,6 +251,7 @@ public class GoogleCalendarService : IGoogleCalendarService
         }
     }
 
+    [Obsolete]
     private async Task DeleteAppointmentEventsAsync(Appointment appointment)
     {
         try
