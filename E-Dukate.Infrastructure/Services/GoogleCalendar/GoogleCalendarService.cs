@@ -150,7 +150,7 @@ public class GoogleCalendarService : IGoogleCalendarService
         try
         {
             Console.WriteLine($"🔍 Iniciando actualización de eventos para cita: {appointment?.Id}");
-            
+
             if (appointment == null)
             {
                 Console.WriteLine("❌ Appointment es null");
@@ -219,7 +219,7 @@ public class GoogleCalendarService : IGoogleCalendarService
                     DateTime endDateTime = session.EndSessionDateTime.AddHours(+4);
 
                     // VALIDAR IDENTITY CARD
-                    string identityCard = appointment.Patient.IdentityCard?.ToString() ?? "Sin cédula";
+                    string identityCard = appointment.Patient.IdentityCard.ToString() ?? "Sin cédula";
                     Console.WriteLine($"📇 Buscando por cédula: {identityCard}");
 
                     // Buscar si ya existe un evento para esta sesión
