@@ -149,23 +149,59 @@ public class GoogleCalendarService : IGoogleCalendarService
     {
         try
         {
-            if (appointment.ScheduledSessions == null || !appointment.ScheduledSessions.Any())
+            Console.WriteLine($"🔍 Iniciando actualización de eventos para cita: {appointment?.Id}");
+            
+            if (appointment == null)
             {
-                Console.WriteLine("No hay sesiones programadas para esta cita.");
+                Console.WriteLine("❌ Appointment es null");
                 return false;
             }
+
+            if (appointment.ScheduledSessions == null || !appointment.ScheduledSessions.Any())
+            {
+                Console.WriteLine("❌ No hay sesiones programadas para esta cita.");
+                return false;
+            }
+
+            // VALIDAR PROPIEDADES REQUERIDAS
+            if (appointment.Patient == null)
+            {
+                Console.WriteLine("❌ Patient es null");
+                return false;
+            }
+
+            if (appointment.Specialist == null)
+            {
+                Console.WriteLine("❌ Specialist es null");
+                return false;
+            }
+
+            if (appointment.Specialty == null)
+            {
+                Console.WriteLine("❌ Specialty es null");
+                return false;
+            }
+
+            Console.WriteLine($"📋 Paciente: {appointment.Patient.Names} {appointment.Patient.LastNamePaternal}");
+            Console.WriteLine($"👨‍⚕️ Especialista: {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal}");
+            Console.WriteLine($"🎯 Especialidad: {appointment.Specialty.TypeOfSpecialty}");
 
             // Buscar y actualizar solo las sesiones que cambiaron
             var startDate = appointment.ScheduledSessions.Min(s => s.StartSessionDateTime).AddMonths(-1);
             var endDate = appointment.ScheduledSessions.Max(s => s.StartSessionDateTime).AddMonths(1);
 
+            Console.WriteLine($"🔍 Buscando eventos desde: {startDate} hasta: {endDate}");
+
             var existingEvents = await ListEventsAsync(appointment.SpecialistId, startDate, endDate);
 
+            // VALIDACIÓN PARA EVITAR NullReferenceException
             if (existingEvents == null)
             {
-                Console.WriteLine("No se pudieron obtener los eventos existentes.");
+                Console.WriteLine("⚠️ No se pudieron obtener los eventos existentes, creando lista vacía.");
                 existingEvents = new List<Event>();
             }
+
+            Console.WriteLine($"📅 Eventos existentes encontrados: {existingEvents.Count}");
 
             var gender = appointment.Patient.Gender?.ToUpper() == "F" ? "Femenino" :
                         appointment.Patient.Gender?.ToUpper() == "M" ? "Masculino" :
@@ -177,22 +213,32 @@ public class GoogleCalendarService : IGoogleCalendarService
             {
                 try
                 {
+                    Console.WriteLine($"🔄 Procesando sesión: {session.StartSessionDateTime}");
+
                     DateTime startDateTime = session.StartSessionDateTime.AddHours(+4);
                     DateTime endDateTime = session.EndSessionDateTime.AddHours(+4);
 
+                    // VALIDAR IDENTITY CARD
+                    string identityCard = appointment.Patient.IdentityCard?.ToString() ?? "Sin cédula";
+                    Console.WriteLine($"📇 Buscando por cédula: {identityCard}");
+
+                    // Buscar si ya existe un evento para esta sesión
                     var existingEvent = existingEvents.FirstOrDefault(e =>
-                        e.Start?.DateTimeDateTimeOffset?.DateTime == startDateTime ||
-                        e.Description?.Contains(appointment.Patient.IdentityCard.ToString()) == true);
+                        (e.Start?.DateTime.HasValue == true && e.Start.DateTime.Value == startDateTime) ||
+                        (e.Description?.Contains(identityCard) == true));
 
                     var eventSummary = $"Cita: {appointment.Specialty.TypeOfSpecialty} - {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal}";
                     var eventDescription = $@"Cita médica con el especialista {appointment.Specialist.Names} {appointment.Specialist.LastNamePaternal} para el paciente {appointment.Patient.Names} {appointment.Patient.LastNamePaternal}.
-                Cédula: {appointment.Patient.IdentityCard}
+                Cédula: {identityCard}
                 Género: {gender}
                 Edad: {appointment.Patient.Age}
                 Estado: {session.Status}";
 
                     if (existingEvent != null)
                     {
+                        Console.WriteLine($"✅ Actualizando evento existente: {existingEvent.Id}");
+
+                        // Actualizar evento existente
                         existingEvent.Summary = eventSummary;
                         existingEvent.Description = eventDescription;
                         existingEvent.Start = new EventDateTime { DateTime = startDateTime };
@@ -205,6 +251,9 @@ public class GoogleCalendarService : IGoogleCalendarService
                     }
                     else
                     {
+                        Console.WriteLine($"🆕 Creando nuevo evento para sesión: {session.StartSessionDateTime}");
+
+                        // Crear nuevo evento
                         var newEvent = new Event
                         {
                             Summary = eventSummary,
@@ -223,15 +272,18 @@ public class GoogleCalendarService : IGoogleCalendarService
                 catch (Exception ex)
                 {
                     Console.WriteLine($"❌ Error al actualizar/crear evento para sesión {session.StartSessionDateTime}: {ex.Message}");
+                    Console.WriteLine($"❌ StackTrace: {ex.StackTrace}");
                     allEventsUpdated = false;
                 }
             }
 
+            Console.WriteLine($"📊 Resultado actualización: {(allEventsUpdated ? "ÉXITO" : "CON ERRORES")}");
             return allEventsUpdated;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error general al actualizar eventos en Google Calendar: {ex}");
+            Console.WriteLine($"❌ Error general al actualizar eventos en Google Calendar: {ex.Message}");
+            Console.WriteLine($"❌ StackTrace: {ex.StackTrace}");
             return false;
         }
     }
@@ -284,7 +336,8 @@ public class GoogleCalendarService : IGoogleCalendarService
             Console.WriteLine($"Error al buscar eventos para eliminar: {ex.Message}");
         }
     }
-    
+
+    [Obsolete]
     public async Task<bool> DeleteAppointmentEventAsync(Appointment appointment)
     {
         try
