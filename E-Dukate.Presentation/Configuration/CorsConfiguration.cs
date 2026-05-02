@@ -10,7 +10,7 @@ public static class CorsConfiguration
             {
                 policy.WithOrigins(
                         "http://localhost:3000",
-                        "https://e-dukate.up.railway.app"
+                        "https://e-dukate-production.up.railway.app"
                     )
                     .AllowAnyMethod()
                     .AllowAnyHeader()
