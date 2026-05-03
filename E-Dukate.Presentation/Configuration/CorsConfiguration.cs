@@ -31,7 +31,7 @@ public static class CorsConfiguration
 
     public static IApplicationBuilder UseCorsConfiguration(this IApplicationBuilder app)
     {
-        app.UseCors("AllowSpecificOrigins");
+        app.UseCors("AllowAll");
         return app;
     }
 }
