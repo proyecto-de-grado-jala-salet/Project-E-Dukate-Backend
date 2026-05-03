@@ -15,7 +15,8 @@ public static class CorsConfiguration
                     .AllowAnyMethod()
                     .AllowAnyHeader()
                     .AllowCredentials()
-                    .WithExposedHeaders("Content-Disposition");
+                    .WithExposedHeaders("Content-Disposition")
+                    .SetIsOriginAllowed(_ => true);
             });
             
             options.AddPolicy("AllowAll", policy =>

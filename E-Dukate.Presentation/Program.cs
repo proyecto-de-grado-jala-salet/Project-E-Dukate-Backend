@@ -56,8 +56,21 @@ builder.Services.AddAuthentication(options =>
 
 var app = builder.Build();
 
-app.UseCorsConfiguration()
-   .UseAuthentication()
+app.UseCorsConfiguration();
+
+
+app.Use(async (context, next) =>
+{
+    if (context.Request.Method == "OPTIONS")
+    {
+        context.Response.StatusCode = 200;
+        return;
+    }
+    await next();
+});
+
+
+app.UseAuthentication()
    .UseAuthorization()
    .ConfigureMiddleware(app.Environment);
 
