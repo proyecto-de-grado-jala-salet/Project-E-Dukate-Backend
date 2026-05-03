@@ -15,8 +15,7 @@ public static class CorsConfiguration
                     .AllowAnyMethod()
                     .AllowAnyHeader()
                     .AllowCredentials()
-                    .WithExposedHeaders("Content-Disposition")
-                    .SetIsOriginAllowed(_ => true);
+                    .WithExposedHeaders("Content-Disposition");                    
             });
             
             options.AddPolicy("AllowAll", policy =>
@@ -31,7 +30,7 @@ public static class CorsConfiguration
 
     public static IApplicationBuilder UseCorsConfiguration(this IApplicationBuilder app)
     {
-        app.UseCors("AllowAll");
+        app.UseCors("AllowSpecificOrigins");
         return app;
     }
 }
