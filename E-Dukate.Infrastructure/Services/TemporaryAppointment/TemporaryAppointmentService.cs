@@ -64,8 +64,24 @@ public class TemporaryAppointmentService
     public async Task<List<TemporaryAppointmentResponseDto>> GetPendingAppointmentsAsync()
     {
         var appointments = await _temporaryAppointmentRepository.GetPendingAppointmentsAsync();
+        return appointments.Select(MapToDto).ToList();
+    }
 
-        return appointments.Select(appointment => new TemporaryAppointmentResponseDto
+    public async Task<List<TemporaryAppointmentResponseDto>> GetApprovedAppointmentsAsync()
+    {
+        var appointments = await _temporaryAppointmentRepository.GetApprovedAppointmentsAsync();
+        return appointments.Select(MapToDto).ToList();
+    }
+
+    public async Task<List<TemporaryAppointmentResponseDto>> GetRejectedAppointmentsAsync()
+    {
+        var appointments = await _temporaryAppointmentRepository.GetRejectedAppointmentsAsync();
+        return appointments.Select(MapToDto).ToList();
+    }
+    
+    private TemporaryAppointmentResponseDto MapToDto(Domain.Entities.Appointments.TemporaryAppointment appointment)
+    {
+        return new TemporaryAppointmentResponseDto
         {
             Id = appointment.Id,
             WhatsAppNumber = appointment.WhatsAppNumber,
@@ -78,7 +94,7 @@ public class TemporaryAppointmentService
             Status = appointment.Status,
             PaymentUploadedAt = appointment.PaymentUploadedAt,
             ProcessedAt = appointment.ProcessedAt
-        }).ToList();
+        };
     }
 
     public async Task<Result> UploadComprobanteAsync(UploadComprobanteRequestDto request)

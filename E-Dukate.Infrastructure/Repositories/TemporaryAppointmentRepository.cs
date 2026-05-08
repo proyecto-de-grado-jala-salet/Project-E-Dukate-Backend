@@ -22,6 +22,22 @@ public class TemporaryAppointmentRepository : GenericRepository<TemporaryAppoint
             .ToListAsync();
     }
 
+    public async Task<List<TemporaryAppointment>> GetApprovedAppointmentsAsync()
+    {
+        return await _context.Set<TemporaryAppointment>()
+            .Where(ta => ta.Status == "Approved" && ta.IsProcessed)
+            .OrderByDescending(ta => ta.ProcessedAt)
+            .ToListAsync();
+    }
+    
+    public async Task<List<TemporaryAppointment>> GetRejectedAppointmentsAsync()
+    {
+        return await _context.Set<TemporaryAppointment>()
+            .Where(ta => ta.Status == "Rejected" && ta.IsProcessed)
+            .OrderByDescending(ta => ta.ProcessedAt)
+            .ToListAsync();
+    }
+
     public async Task<List<TemporaryAppointment>> GetByWhatsAppNumberAsync(string whatsAppNumber)
     {
         return await _context.Set<TemporaryAppointment>()

@@ -85,6 +85,36 @@ public class TemporaryAppointmentsController : ControllerBase
         }
     }
 
+    [HttpGet("approved")]
+    [Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> GetApprovedAppointments()
+    {
+        try
+        {
+            var appointments = await _temporaryAppointmentService.GetApprovedAppointmentsAsync();
+            return Ok(appointments);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+    
+    [HttpGet("rejected")]
+    [Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> GetRejectedAppointments()
+    {
+        try
+        {
+            var appointments = await _temporaryAppointmentService.GetRejectedAppointmentsAsync();
+            return Ok(appointments);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
     [HttpPost("{id}/verify")]
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> VerifyAppointment(Guid id, [FromBody] VerifyTemporaryAppointmentRequestDto request)
